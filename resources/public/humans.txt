@@ -1,0 +1,15 @@
+# humanstxt.org/
+# The humans responsible & technology colophon
+
+# TEAM
+
+    Dan Brook -- webmaster -- @broquaint
+
+# THANKS
+
+    https://github.com/h5bp/html5-boilerplate
+
+# TECHNOLOGY COLOPHON
+
+    HTML5, CSS3
+    Normalize.css, jQuery, Modernizr
