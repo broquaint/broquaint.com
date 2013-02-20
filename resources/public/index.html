@@ -10,38 +10,84 @@
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width">
 
-        <!-- Place favicon.ico and apple-touch-icon.png in the root directory -->
-
         <link rel="stylesheet" href="css/normalize.css">
         <link rel="stylesheet" href="css/main.css">
-        <script src="js/vendor/modernizr-2.6.2.min.js"></script>
+        <!-- <script src="js/vendor/modernizr-2.6.2.min.js"></script> -->
 
 	<style>
 	  @font-face {
 	    font-family: "Nova Square";
 	    src: url("/fonts/Nova_Square/NovaSquare.ttf");
 	  }
+	  @font-face {
+	    font-family: "Roboto";
+	    src: url("/fonts/Roboto/Roboto-Regular.ttf");
+	  }
 	  body {
-	    font-family: "Nova Square", serif;
+	    color: #080808;
+	  }
+
+	  a {
+	    text-decoration: none;
+	    color: #8C0200;
+	  }
+	  a:hover {
+	    color: #FF1C19;
 	  }
 
 	  #content {
 	    margin: 0  auto;
 	    width: 256px;
 	  }
+	  #header {
+	    font-family: "Nova Square", serif;
+	  }
+	  #header h1 {
+	    letter-spacing: 5px;
+	    margin-bottom: 0.25em;
+	    color: #D80200;
+	  }
+	  #header p {
+	    margin-top: 0;
+	  }
+	  .copy {
+	    font-family: "Roboto", serif;
+	  }
+	  ul#links {
+	    list-style: none;
+	  }
+	  #links li::before { content: '@ '; }
 	</style>
     </head>
     <body>
       <div id=content>
-	<h1>broquaint.com</h1>
-	<p>by Dan Brook</h2>
+	<div id=header>
+	  <h1>broquaint.com</h1>
+	  <p>by Dan Brook</p>
+	</div>
+	<div class=copy>
+	  <ul id=links>
+	    <li><a href='https://github.com/broquaint'>Github</a>
+	    <li><a href='https://metacpan.org/author/BROQ'>CPAN</a>
+	    <li><a href='https://twitter.com/broquaint'>Twitter</a>
+	  </ul>
+	</div>
       </div>
-      
+
+      <!--
       <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.min.js"></script>
       <script>window.jQuery || document.write('<script src="js/vendor/jquery-1.9.0.min.js"><\/script>')</script>
       <script src="js/plugins.js"></script>
       <script src="js/main.js"></script>
-	  
-      <!-- TODO - Google Analytics: change UA-XXXXX-X to be your site's ID. -->
+      -->
+
+      <script>
+	_gaq = [['_setAccount','UA-114965-1'],['_trackPageview']];
+        (function(d,t) {
+	  var g=d.createElement(t),s=d.getElementsByTagName(t)[0];
+          g.src=('https:'==location.protocol?'//ssl':'//www')+'.google-analytics.com/ga.js';
+          s.parentNode.insertBefore(g,s)
+        }(document,'script'));
+      </script>
     </body>
 </html>

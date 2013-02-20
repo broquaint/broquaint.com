@@ -4,8 +4,7 @@
   :dependencies [[org.clojure/clojure "1.4.0"]
                  [ring/ring-jetty-adapter "1.1.8"]
                  [compojure "1.1.5"]
-                 [hiccup "1.0.0"]
-                 [fs "1.3.2"]]
+                 [hiccup "1.0.0"]]
   :plugins [[lein-ring "0.8.2"]]
   :ring {:handler broquaint.handler/app}
   :profiles
