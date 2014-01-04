@@ -3,91 +3,92 @@
 <!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8"> <![endif]-->
 <!--[if IE 8]>         <html class="no-js lt-ie9"> <![endif]-->
 <!--[if gt IE 8]><!--> <html class="no-js"> <!--<![endif]-->
-    <head>
-        <meta charset="utf-8">
-        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
-        <title>broquaint.com</title>
-        <meta name="description" content="">
-        <meta name="viewport" content="width=device-width">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <title>broquaint.com</title>
+  <meta name="description" content="">
+  <meta name="viewport" content="width=device-width">
 
-        <link rel="stylesheet" href="css/normalize.css">
-        <link rel="stylesheet" href="css/main.css">
-        <!-- <script src="js/vendor/modernizr-2.6.2.min.js"></script> -->
+  <link rel="stylesheet" href="css/normalize.css">
+  <link rel="stylesheet" href="css/main.css">
+  <script src="js/vendor/modernizr-2.6.2.min.js"></script>
 
-	<style>
-	  @font-face {
-	    font-family: "Nova Square";
-	    src: url("/fonts/Nova_Square/NovaSquare.ttf");
-	  }
-	  @font-face {
-	    font-family: "Roboto";
-	    src: url("/fonts/Roboto/Roboto-Regular.ttf");
-	  }
-	  body {
-	    color: #080808;
-	  }
+  <style>
+  @font-face {
+    font-family: "Nova Square";
+    src: url("/fonts/Nova_Square/NovaSquare.ttf");
+  }
+  @font-face {
+    font-family: "Roboto";
+    src: url("/fonts/Roboto/Roboto-Regular.ttf");
+  }
+  body {
+    color: #080808;
+  }
 
-	  a {
-	    text-decoration: none;
-	    color: #8C0200;
-	  }
-	  a:hover {
-	    color: #FF1C19;
-	  }
+  a {
+    text-decoration: none;
+    color: #8C0200;
+  }
+  a:hover {
+    color: #FF1C19;
+  }
 
-	  #content {
-	    margin: 0  auto;
-	    width: 256px;
-	  }
-	  #header {
-	    font-family: "Nova Square", serif;
-	  }
-	  #header h1 {
-	    letter-spacing: 5px;
-	    margin-bottom: 0.25em;
-	    color: #D80200;
-	  }
-	  #header p {
-	    margin-top: 0;
-	  }
-	  .copy {
-	    font-family: "Roboto", serif;
-	  }
-	  ul#links {
-	    list-style: none;
-	  }
-	  #links li::before { content: '@ '; }
-	</style>
-    </head>
-    <body>
-      <div id=content>
-	<div id=header>
-	  <h1>broquaint.com</h1>
-	  <p>by Dan Brook</p>
-	</div>
-	<div class=copy>
-	  <ul id=links>
-	    <li><a href='https://github.com/broquaint'>Github</a>
-	    <li><a href='https://metacpan.org/author/BROQ'>CPAN</a>
-	    <li><a href='https://twitter.com/broquaint'>Twitter</a>
-	  </ul>
-	</div>
-      </div>
+  section {
+    margin: 0  auto;
+    width: 256px;
+  }
+  header {
+    font-family: "Nova Square", serif;
+  }
+  header h1 {
+    letter-spacing: 5px;
+    margin-bottom: 0.25em;
+    color: #D80200;
+  }
+  header p {
+    margin-top: 0;
+  }
+  main {
+    font-family: "Roboto", serif;
+  }
+  ul#links {
+    list-style: none;
+  }
+  #links li::before { content: '@ '; }
+  </style>
+</head>
+<body>
+  <section>
+    <header>
+      <h1>broquaint.com</h1>
+      <p>by Dan Brook</p>
+    </header>
+    <main>
+      <ul id=links>
+        <li><a href='https://github.com/broquaint'>Github</a></li>
+        <li><a href='https://twitter.com/broquaint'>Twitter</a></li>
+        <li><a href='https://metacpan.org/author/BROQ'>CPAN</a></li>
+        <li><a href='http://rubygems.org/profiles/broquaint'>RubyGems</a></li>
+      </ul>
+    </main>
+  </section>
 
-      <!--
-      <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.min.js"></script>
-      <script>window.jQuery || document.write('<script src="js/vendor/jquery-1.9.0.min.js"><\/script>')</script>
-      <script src="js/plugins.js"></script>
-      <script src="js/main.js"></script>
-      -->
+  <!--
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.min.js"></script>
+  <script>window.jQuery || document.write('<script src="js/vendor/jquery-1.9.0.min.js"><\/script>')</script>
+  <script src="js/plugins.js"></script>
+  <script src="js/main.js"></script>
+  -->
 
-      <script>
-	_gaq = [['_setAccount','UA-114965-1'],['_trackPageview']];
-        (function(d,t) {
-	  var g=d.createElement(t),s=d.getElementsByTagName(t)[0];
-          g.src=('https:'==location.protocol?'//ssl':'//www')+'.google-analytics.com/ga.js';
-          s.parentNode.insertBefore(g,s)
-        }(document,'script'));
-      </script>
-    </body>
+  <script>
+  _gaq = [['_setAccount','UA-114965-1'],['_trackPageview']];
+  (function(d,t) {
+      var g=d.createElement(t),s=d.getElementsByTagName(t)[0];
+      g.src=('https:'==location.protocol?'//ssl':'//www')+'.google-analytics.com/ga.js';
+      s.parentNode.insertBefore(g,s)
+    }(document,'script'));
+  </script>
+</body>
 </html>
