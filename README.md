@@ -16,4 +16,4 @@ To start a web server for the application, run:
 
 ## License
 
-Copyright © 2013 Dan Brook
+Copyright © 2014 Dan Brook

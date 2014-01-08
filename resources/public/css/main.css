@@ -79,35 +79,82 @@ textarea {
 }
 
 /* ==========================================================================
-   Chrome Frame prompt
-   ========================================================================== */
-
-.chromeframe {
-    margin: 0.2em 0;
-    background: #ccc;
-    color: #000;
-    padding: 0.2em 0;
-}
-
-/* ==========================================================================
    Author's custom styles
    ========================================================================== */
+@font-face {
+  font-family: "Nova Square";
+  src: url("/fonts/Nova_Square/NovaSquare.ttf");
+}
+@font-face {
+  font-family: "Roboto";
+  src: url("/fonts/Roboto/Roboto-Regular.ttf");
+}
 
+main, footer, a.email {
+  color: #080808;
+}
+main, footer {
+  font-family: "Roboto", serif;
+}
 
+a {
+  text-decoration: none;
+  color: #8C0200;
+}
+a:hover {
+  color: #FF1C19;
+}
 
+section {
+  margin: 0  auto;
+  width: 300px;
+}
+header, h2 {
+  font-family: "Nova Square", serif;
+}
+header h1 {
+  letter-spacing: 0.16em;
+  margin-bottom: 0.25em;
+  color: #D80200;
+}
+header p {
+  margin-top: 0;
+}
 
+h2 {
+  letter-spacing: 0.1em;
+  color: gray;
+  margin: 0.5em 0;
+}
 
+#links {
+  list-style: none;
+}
 
+#links li {
+  margin: 0.3em auto;
+}
 
+.projects {
+    display: none; /* Shown when repo JSON loads */
+}
+ul.projects {
+  font-size: 0.8em;
+  list-style: none;
+}
+.projects a {
+  font-size: 1.25em;
+}
 
-
-
-
-
-
-
-
-
+footer {
+  valign: bottom;
+  color: silver;
+  font-size: 0.7em;
+  margin-bottom: 0.5em;
+}
+footer a {
+  color: salmon;
+}
 
 /* ==========================================================================
    Helper classes
