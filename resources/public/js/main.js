@@ -16,11 +16,11 @@ function createRepoItem(repo) {
 }
 
 function handleReposJSON(result) {
-    jQuery('ul.projects').append(
+    jQuery('#projects ul').append(
         jQuery.map(result.repos, createRepoItem)
     );
 
-    jQuery('.projects').show();
+    jQuery('#projects').show();
 }
 
 jQuery(function() {

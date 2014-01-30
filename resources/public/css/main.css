@@ -105,7 +105,7 @@ a:hover {
   color: #FF1C19;
 }
 
-section {
+body > section {
   margin: 0  auto;
   width: 300px;
 }
@@ -135,15 +135,19 @@ h2 {
   margin: 0.3em auto;
 }
 
-.projects {
+#projects {
     display: none; /* Shown when repo JSON loads */
 }
-ul.projects {
+#projects ul {
   font-size: 0.8em;
   list-style: none;
 }
-.projects a {
+#projects li a {
   font-size: 1.25em;
+}
+#projects > p {
+    font-size: 0.9em;
+    padding-left: 40px; /* Keep aligned with list items as per normalize.css */
 }
 
 footer {
@@ -151,6 +155,7 @@ footer {
   color: silver;
   font-size: 0.7em;
   margin-bottom: 0.5em;
+  margin-top: 1.8em;
 }
 footer a {
   color: salmon;
