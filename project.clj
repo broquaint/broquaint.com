@@ -1,4 +1,4 @@
-(defproject broquaint "0.1.2"
+(defproject broquaint "0.1.3"
   :description "The broquaint.com website"
   :url "http://broquaint.com/"
   :dependencies [[org.clojure/clojure "1.5.1"]
