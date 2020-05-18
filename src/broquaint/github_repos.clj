@@ -33,7 +33,7 @@
    :html_url    (:html_url repo)
    :description (:description repo)
    :full_name (string/replace (:full_name repo) #"broquaint/" "")
-   :language  (string/lower-case (:language repo))
+   :language  (string/lower-case (or (:language repo) "unknown"))
    :pushed_at (string/replace (:pushed_at repo) #"T.*" "")
    })
 
