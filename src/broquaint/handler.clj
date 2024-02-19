@@ -9,8 +9,17 @@
   (:gen-class))
 
 (defroutes app-routes
-  ;; Landing (and currently only) page.
-  (route/files "/" {:root "resources/public"})
+  (GET "/" []
+        (-> (file-response "blog/_site/index.html")
+            (content-type "text/html")))
+
+  ;; The ol' blog
+  (route/files "/blog" {:root "blog/_site/blog"})
+  ;; Assets etc
+  (route/files "/assets" {:root "blog/assets"})
+  (route/files "/css" {:root "resources/public/css"})
+  (route/files "/js" {:root "resources/public/js"})
+  (route/files "/fonts" {:root "resources/public/fonts"})
 
   ;; github repo json
   (GET "/repos.json" []

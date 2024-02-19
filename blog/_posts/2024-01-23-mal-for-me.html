@@ -191,7 +191,7 @@ TEST RESULTS (for ../tests/step1_read_print.mal):
     </p>
     <p>
       At the point I go to reckon with those types in <code>pr_str</code> is when I
-      realise that my naive understanding of types in TypeScript was
+      realise that my naïve understanding of types in TypeScript was
       flawed. Those initial types I created looked like this:
     </p>
     <pre><code class="hljs language-typescript"><span class="hljs-keyword">export</span> <span class="hljs-keyword">interface</span> <span class="hljs-title class_">MalType</span> {}
@@ -230,12 +230,12 @@ TEST RESULTS (for ../tests/step1_read_print.mal):
 
 <span class="hljs-keyword">export</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">pr_str</span>(<span class="hljs-params">v: MalType</span>): <span class="hljs-built_in">string</span> {
     <span class="hljs-keyword">switch</span>(v) {
-        <span class="hljs-keyword">case</span> <span class="hljs-title class_">MalList</span>:
-            <span class="hljs-keyword">return</span> <span class="hljs-string">"("</span> + v.<span class="hljs-property">values</span>.<span class="hljs-title function_">map</span>(pr_str).<span class="hljs-title function_">join</span>(<span class="hljs-string">" "</span>) + <span class="hljs-string">")"</span>
-        <span class="hljs-keyword">case</span> <span class="hljs-title class_">MalNumber</span>:
-            <span class="hljs-keyword">return</span> v.<span class="hljs-property">num</span>
-        <span class="hljs-keyword">case</span> <span class="hljs-title class_">MalSymbol</span>:
-            <span class="hljs-keyword">return</span> v.<span class="hljs-property">sym</span>
+        <span class="hljs-keyword">case</span> <span class="hljs-title class_" style="text-decoration: red wavy underline;">MalList</span>:
+            <span class="hljs-keyword">return</span> <span class="hljs-string">"("</span> + v.<span class="hljs-property" style="text-decoration: red wavy underline;">values</span>.<span class="hljs-title function_">map</span>(pr_str).<span class="hljs-title function_">join</span>(<span class="hljs-string">" "</span>) + <span class="hljs-string">")"</span>
+        <span class="hljs-keyword">case</span> <span class="hljs-title class_" style="text-decoration: red wavy underline;">MalNumber</span>:
+            <span class="hljs-keyword">return</span> v.<span class="hljs-property" style="text-decoration: red wavy underline;">num</span>
+        <span class="hljs-keyword">case</span> <span class="hljs-title class_" style="text-decoration: red wavy underline;">MalSymbol</span>:
+            <span class="hljs-keyword">return</span> v.<span class="hljs-property" style="text-decoration: red wavy underline;">sym</span>
         <span class="hljs-attr">default</span>:
             <span class="hljs-keyword">throw</span> <span class="hljs-string">"Unrecognised value type "</span> + <span class="hljs-keyword">typeof</span> v
     }
@@ -290,13 +290,13 @@ TypeScript</strong> section we have it spelled out even more clearly:</p>
       to quote from same section of that paper to elaborate:
     </p>
     <blockquote>
-      <p>Structural types: The TypeScript type system is structural rather than nominal. Whilst structural type systems are common in formal descriptions of object-oriented languages <a href="http://lucacardelli.name/TheoryOfObjects.html">[1]</a>, most industrial mainstream languages, such as Java and C], are nominal. However, structural typing may be the only reasonable fit for JavaScript programming, where objects are often built from scratch (not from classes), and used purely based on their expected shape.</p>
+      <p>Structural types: The TypeScript type system is structural rather than nominal. Whilst structural type systems are common in formal descriptions of object-oriented languages <a href="http://lucacardelli.name/TheoryOfObjects.html">[1]</a>, most industrial mainstream languages, such as Java and C, are nominal. However, structural typing may be the only reasonable fit for JavaScript programming, where objects are often built from scratch (not from classes), and used purely based on their expected shape.</p>
     </blockquote>
     <p>
       That is what I had intuited so it was nice to written down in a paper!
       It also makes sense of the explanation of <a href="https://www.typescriptlang.org/docs/handbook/2/narrowing.html#discriminated-unions">discriminated unions</a>
       and why that is a normal and expected way of doing type
-      dispatch/discrimination in TypeScript—your types aren't their at
+      dispatch/discrimination in TypeScript—your types aren't there at
       runtime so <em>should</em> you need type information then you need your objects to carry
       that information with them.
     </p>
@@ -386,10 +386,10 @@ user> (+ (x 5 6) 7 8 9 (+ 10 11))
     <p>
       So what should be happening is that while any given token isn't <code>)</code> we
       attempt to read the next form. Which means given an input like <code>(+ foo bar)</code>
-      we'll see a call stack like this with annotate reader:
+      we'll see a call stack like this (with simplified <code>Reader</code> representation):
     </p>
     <ul>
-      <li><code>read_form({pos: 0, tokens: <strong>(</strong> + foo bar )}</code>
+      <li><code>read_form({pos: 0, tokens: <strong>(</strong> + foo bar )})</code>
         <ul>
           <li><code>read_list({pos: 1, tokens: ( <strong>+</strong> foo bar )})</code>
             <ul>

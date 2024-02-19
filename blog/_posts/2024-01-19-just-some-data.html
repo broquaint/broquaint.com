@@ -13,20 +13,20 @@ categories: blog learning
     </p>
     <h2>Data from data place</h2>
     <p>
-      What we need now are two things: a server where the raw data (DCSS
-      logfiles) and a server that exposes the wins from those logs. The
+      What we need now are two things: a server where the raw data
+      (<a href="https://github.com/crawl/sequell/blob/master/docs/listgame.md#logfile-fields">DCSS logfiles</a>) and a server that exposes the wins from those logs. The
       former already exists but instead of hitting live systems while we
       build this thing let's not abuse the kindness of those hosts and, as
       ever, keep testing self–contained.
     </p>
     <p>
-      Firstly it seems my naive approach to the Deno standard library,
+      Firstly it seems my <a href="/blog/learning/2024/01/04/learning-and-making.html#readlines">naïve approach</a> to the Deno standard library,
       treating it like a fancy <code>node</code>, was flawed and there are in fact
       <a href="https://docs.deno.com/deploy/api/runtime-fs#denoreadfile">sensible ways</a> of reading files. I sure do have pie on my face!
     </p>
     <pre><code class="hljs language-typescript">ctx.<span class="hljs-property">response</span>.<span class="hljs-property">body</span> = <span class="hljs-keyword">await</span> <span class="hljs-title class_">Deno</span>.<span class="hljs-title function_">readFile</span>(<span class="hljs-string">"./webzook-0.30.logfile"</span>);
 </code></pre>
-    <p>That's the crux of the test logfile server for now.</p>
+    <p>Anyhow for now that's the crux of the local server for logfile data.</p>
     <p>
       Next we need to fetch that data ... and then keep track of it. The
       latter is where the complexity will <em>actually</em> lie but it's mostly
@@ -58,8 +58,7 @@ app.<span class="hljs-title function_">use</span>(<span class="hljs-keyword">asy
       Arguably it does a little more than is strictly necessary at this
       point but I've found that a little error handling early on can save
       some hair pulling later on. And, lucklily for me, that worked off the
-      bat (it's that TypeScript productivity boost and definitely not
-      decades of experience!):
+      bat (it's that TypeScript productivity boost!):
     </p>
     <pre><code>$ curl http://localhost:8000/
 {"todo":"actual data"}
@@ -80,7 +79,7 @@ Failed to fetch logfiles, come back later.
         <span class="hljs-keyword">return</span> {...acc, [p[<span class="hljs-number">0</span>]]: p[<span class="hljs-number">1</span>]};
       }, {})
     })
-    .<span class="hljs-title function_">filter</span>(<span class="hljs-function"><span class="hljs-params">game</span> =></span> game.<span class="hljs-property">tmsg</span>.<span class="hljs-title function_">startsWith</span>(<span class="hljs-string">'escaped with the Orb'</span>))
+    .<span class="hljs-title function_">filter</span>(<span class="hljs-function"><span class="hljs-params">game</span> =></span> game.<span class="hljs-property" style="text-decoration: red wavy underline;">tmsg</span>.<span class="hljs-title function_">startsWith</span>(<span class="hljs-string">'escaped with the Orb'</span>))
     .<span class="hljs-title function_">slice</span>(<span class="hljs-number">0</span>, <span class="hljs-number">3</span>)
 }
 </code></pre>
@@ -130,9 +129,9 @@ Failed to fetch logfiles, come back later.
     <h2>Double take single type</h2>
     <p>Actually, squinting at that error message again:</p>
     <p>
-      The pennies are being to drop—the <em>lookup</em> being done in the <code>filter</code>
+      The pennies are beginning to drop—the <em>lookup</em> being done in the <code>filter</code>
       is on an <a href="https://www.typescriptlang.org/docs/handbook/2/indexed-access-types.html">index type</a> (aka <em>Indexed Access Type</em>) and the error
-      relates to the bare object being based into <code>reduce</code> so we don't need
+      relates to the bare object being passed into <code>reduce</code> so we don't need
       an object type, we just need to give TypeScript enough information to
       access <code>tmsg</code> at the appropriate point.
     </p>
@@ -162,7 +161,7 @@ Failed to fetch logfiles, come back later.
       checker. It has earned my respect and trust.
     </p>
     <h2>Here, have a byte</h2>
-    <p>With that functionality code now in place let's see the data!</p>
+    <p>With that functionality now in place let's see the data!</p>
     <pre><code>§ curl -s http://localhost:8000/ | jq .
 [
   {
@@ -240,7 +239,7 @@ Failed to fetch logfiles, come back later.
     </p>
     <pre><code class="hljs language-typescript">app.<span class="hljs-title function_">use</span>(<span class="hljs-title function_">async</span>(<span class="hljs-attr">ctx</span>: <span class="hljs-title class_">Context</span>) => {
     <span class="hljs-comment">// Reading it every time isn't optimal but that isn't germane to our purposes.</span>
-    <span class="hljs-keyword">const</span> logfile = <span class="hljs-keyword">await</span> <span class="hljs-title class_">Deno</span>.<span class="hljs-title function_">readFile</span>(<span class="hljs-string">"./webzook-0.30.logfile"</span>);;
+    <span class="hljs-keyword">const</span> logfile = <span class="hljs-keyword">await</span> <span class="hljs-title class_">Deno</span>.<span class="hljs-title function_">readFile</span>(<span class="hljs-string">"./webzook-0.30.logfile"</span>)
     <span class="hljs-keyword">if</span>(ctx.<span class="hljs-property">request</span>.<span class="hljs-property">headers</span>.<span class="hljs-title function_">has</span>(<span class="hljs-string">'range'</span>)) {
         <span class="hljs-comment">// Ok range could be garbage but this isn't exposed to The Internet.</span>
         <span class="hljs-keyword">const</span> [_, fromStr, toStr] = ctx.<span class="hljs-property">request</span>.<span class="hljs-property">headers</span>.<span class="hljs-title function_">get</span>(<span class="hljs-string">'range'</span>)!.<span class="hljs-title function_">match</span>(<span class="hljs-regexp">/\w+=(\d+)-(\d+)/</span>)!
