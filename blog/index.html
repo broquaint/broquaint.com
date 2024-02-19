@@ -1,0 +1,28 @@
+---
+layout: default
+title: Home
+---
+
+<section>
+<h2>Latest Posts</h2>
+
+<ul>
+  {% for post in site.posts %}
+    <li>
+      <a href="{{ post.url }}">{{ post.title }}</a> — {{ post.date | date_to_string }}
+    </li>
+    {% endfor %}
+</ul>
+</section>
+      <h2>Places</h2>
+      <ul id=links>
+        <li><a href='https://github.com/broquaint'>GitHub</a></li>
+        <li><a href='https://indieweb.social/@broquaint'>Mastodon</a></li>
+        <li><a href='https://broquaint.itch.io/'>Itch</a></li>
+      </ul>
+
+      <section id=projects>
+        <h2>Side projects</h2>
+        <ul></ul>
+        <p>More @ <a href='https://github.com/broquaint?tab=repositories'>Github</a></p>
+      </section>

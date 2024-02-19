@@ -1,0 +1,252 @@
+---
+layout: post
+title: "Learning by making things"
+date: 2024-01-04 09:20:13 +0700
+author: Dan Brook
+categories: blog learning
+---
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/atom-one-light.min.css" rel="stylesheet">
+    <h2>Intro</h2>
+    <p>
+      When trying to learn something new often the hardest problem to solve
+      is finding the right questions to ask. Here I sit wanting to create a
+      simple web server in TypeScript, in order to have some experience with
+      the language, and I'm stumbling at the first hurdle—where do I
+      start?
+    </p>
+    <p>
+      Having committed to using Deno, as it supports TypeScript and
+      wanting to use it since it was first announced, I'm faced with the
+      question of which libraries to use. Do I use a TypeScript first
+      library? An existing established JavaScript library and pray for
+      straightforward interoperability? I could roll my own but now I'm
+      solving an already well solved problem and not starting at the one to
+      hand. Instead of equivovating—let's jump in!
+    </p>
+    <h2>The options</h2>
+    <p>
+      First up I begin with searching for "deno web server" and find that I
+      have the following URL in my history as suggested by Firefox:
+    </p>
+    <p><a href="https://deno.com/blog/the-future-and-past-is-server-side-rendering"><img src="/assets/img/learning browser memory.png" title="The address bar in Firefox showing a Deno blog post when I start typing 'deno web server'"></a></p>
+    <p>
+      Well that's a good a place to start as any (you can see my approach is
+      very scientific). In their example they use a library called <a href="https://oakserver.github.io/oak/">oak</a>
+      which appears to have the <code>.ts</code> TypeScript extension so that's a few
+      boxes checked already. Let's see how that goes in practice.
+    </p>
+    <p>
+      Firstly we grab their stock "Hello, World!" example, stick it in a
+      file and see what <code>deno</code> does.
+    </p>
+    <pre><code>$ pbpaste > server.ts
+$ deno run --allow-net server.ts
+Warning Implicitly using latest version (v12.6.1) for https://deno.land/x/oak/mod.ts
+
+# In another terminal ...
+$ curl http://localhost:8000/
+Hello world!
+</code></pre>
+    <p>
+      Excellent, this looks like a good place to start! It seems sometimes
+      the best place to start is with your browser history.
+    </p>
+    <h2>Back to basics</h2>
+    <p>
+      Ordinarily I would use trusty ol' Emacs for writing code but in this
+      instance I'm trying learn new things so it's finally time to use
+      <a href="https://code.visualstudio.com/">Code</a> (what a name!) in anger. Downloading and getting it running
+      is fine and Deno also has <a href="https://docs.deno.com/runtime/manual/references/vscode_deno/">docs specifically for Code</a>. But! It makes the
+      classic doc blunder of using one name in the docs, <code>vscode_deno</code>, and
+      then not using that same name in the extension itself:
+      <p><img src="/assets/img/learning slug not present.png" width="600" title="The Deno docs use 'vscode_deno' but that doesn't appear in the Code extension itself"></p>
+    </p>
+    <p>
+      Now the first thing I must do is "enable a workspace" which is not a
+      concept I currently possess (although I can likely muddle through with
+      similar concepts from other editors/runtimes/etc) ... ok following the
+      instructions produces an error about a <em>lack</em> of workspace. A few
+      steps back are going to be necessary here.
+    </p>
+    <p>
+      An educated guess suggests this is to do with Code, rather than Deno,
+      so let's try those docs. Nothing in the top level of the docs ... ok,
+      the concept isn't essential or well advertised. In that case let's
+      just try stuff in Code ... opening a <em>folder</em> instead of a <em>file</em> has
+      allowed the relevant magic to happen. The squiggly red has now
+      disappeared and the coding can begin in earnest!
+    </p>
+    <h2>Actual requirements</h2>
+    <p>
+      What's really needed is something that fetches the most recent games
+      from the various Dungeon Crawl servers. Then something else that
+      figures out which are the winning games. Then a final piece to expose
+      that information. Sounds like a job for a library! Or at least a
+      dedicated <a href="https://docs.deno.com/runtime/manual/basics/modules/">module</a> as I believe they're called in
+      JavaScript-land. Having <a href="https://github.com/broquaint/soup-stash/blob/master/script/keeping-up-with-the-logs">some experience</a> in this area I'm ready to dive
+      right in, to writing TypeScript, which is basically JavaScript right?
+    </p>
+    <p>
+      Firstly we need some data to work with so let's what we have to work
+      with. The logfiles for the crawl servers are handily <a href="https://github.com/crawl/sequell/blob/master/config/sources.yml">defined already</a>
+      so we put together a URL for a nearby server for the latest version
+      and see what it looks like:
+    </p>
+    <pre><code>$ curl -I https://webzook.net/soup/0.30/logfile
+HTTP/1.1 200 OK
+Date: Thu, 04 Jan 2024 08:42:05 GMT
+Server: Apache/2.4.57 (Unix) OpenSSL/3.0.2
+Last-Modified: Thu, 04 Jan 2024 08:07:29 GMT
+ETag: "7d7c1f-60e1a3916919e"
+Accept-Ranges: bytes
+Content-Length: 8223775
+</code></pre>
+    <p>
+      Ok so that's about 8MB which isn't something we want to fetch on a
+      regular basis. But let's fetch it once and have a look at the data!
+    </p>
+    <pre><code>§ wget -O webzook-0.30.logfile https://webzook.net/soup/0.30/logfile
+...
+2024-01-04 15:50:31 (662 KB/s) - ‘webzook-0.30.logfile’ saved [8223775/8223775]
+§ tail -1 webzook-0.30.logfile
+v=0.30-b1:vlong=0.30-b1-7-gcb88a99046:lv=0.1:vsavrv=Git::0.30-b1-7-gcb88a99046:vsav=34.253:tiles=1:name=FDmntl:race=Spriggan:cls=Brigand:char=SpBr:xl=2:sk=Stealth:sklev=6:title=Sneak:place=D::2:br=D:lvl=2:absdepth=2:hp=0:mhp=14:mmhp=14:mp=3:mmp=3:bmmp=3:str=7:int=12:dex=16:ac=3:ev=16:sh=0:start=20240003183332S:dur=1730:turn=898:aut=6576:kills=23:status=lethally poisoned (0 -> -13):gold=44:goldfound=44:goldspent=0:scrollsused=0:potionsused=0:sc=25:ktyp=pois:killer=a goblin:dam=3:sdam=3:tdam=3:end=20240004080729S:seed=5894012356088655548:tmsg=succumbed to a goblin's poison
+</code></pre>
+    <p>
+      Super! Some colon–delimited key=value pairs, that should be easy
+      enough to work all things being equal. Now does Code provide a REPL
+      for poking about with ... it seems like <a href="https://code.visualstudio.com/Docs/languages/typescript">not?</a>. At a glance it
+      suggests TypeScript REPLs aren't commonly used, so let's hope there's
+      a JavaScript REPL or we'll be running <code>deno</code> from a terminal.
+    </p>
+    <p>
+      It seems the line–based paradigm is out and live coding is in, cool,
+      that works too. It looks like <a href="https://marketplace.visualstudio.com/items?itemName=achil.vscode-javascript-repl">JavaScript REPL</a> is the extension of
+      choice and I'm happy to go with that. It works and is nice but, as my
+      first experience of writing code with Code (that name!) shows that the
+      editor is a little too eager to flag every little issue the very
+      moment it occurs. I believe that can be configured ... bumping up some
+      delays makes it seem less aggressive but only marginally. At any rate
+      it's working nicely and I can easily build a map that shows what
+      happened in the game.
+    </p>
+    <pre><code class="hljs language-typescript"><span class="hljs-keyword">const</span> logline = <span class="hljs-string">`v=0.30-b1:vlong=0.30-b1-7-gcb88a99046:lv=0.1:vsavrv=Git::0.30-b1-7-gcb88a99046:vsav=34.253:tiles=1:name=FDmntl:race=Spriggan:cls=Brigand:char=SpBr:xl=2:sk=Stealth:sklev=6:title=Sneak:place=D::2:br=D:lvl=2:absdepth=2:hp=0:mhp=14:mmhp=14:mp=3:mmp=3:bmmp=3:str=7:int=12:dex=16:ac=3:ev=16:sh=0:start=20240003183332S:dur=1730:turn=898:aut=6576:kills=23:status=lethally poisoned (0 -> -13):gold=44:goldfound=44:goldspent=0:scrollsused=0:potionsused=0:sc=25:ktyp=pois:killer=a goblin:dam=3:sdam=3:tdam=3:end=20240004080729S:seed=5894012356088655548:tmsg=succumbed to a goblin's poison`</span>;
+<span class="hljs-keyword">const</span> pairs = logline.<span class="hljs-title function_">split</span>(<span class="hljs-regexp">/\b:\b/</span>);
+<span class="hljs-keyword">const</span> result = pairs.<span class="hljs-title function_">reduce</span>(<span class="hljs-function">(<span class="hljs-params">acc: <span class="hljs-built_in">Object</span>, s</span>) =></span> {
+  <span class="hljs-keyword">const</span> p = s.<span class="hljs-title function_">split</span>(<span class="hljs-regexp">/\b=\b/</span>);
+  <span class="hljs-keyword">return</span> {...acc, [p[<span class="hljs-number">0</span>]]: p[<span class="hljs-number">1</span>]};
+}, {});
+
+{ <span class="hljs-attr">absdepth</span>: <span class="hljs-string">'2'</span>,
+  <span class="hljs-attr">ac</span>: <span class="hljs-string">'3'</span>,
+  <span class="hljs-attr">aut</span>: <span class="hljs-string">'6576'</span>,
+  <span class="hljs-attr">bmmp</span>: <span class="hljs-string">'3'</span>,
+  <span class="hljs-attr">br</span>: <span class="hljs-string">'D'</span>,
+  <span class="hljs-attr">char</span>: <span class="hljs-string">'SpBr'</span>,
+  <span class="hljs-attr">cls</span>: <span class="hljs-string">'Brigand'</span>,
+  <span class="hljs-attr">dam</span>: <span class="hljs-string">'3'</span>,
+  <span class="hljs-attr">dex</span>: <span class="hljs-string">'16'</span>,
+  <span class="hljs-attr">dur</span>: <span class="hljs-string">'1730'</span>,
+  <span class="hljs-attr">end</span>: <span class="hljs-string">'20240004080729S'</span>,
+  <span class="hljs-attr">ev</span>: <span class="hljs-string">'16'</span>,
+  <span class="hljs-attr">goldfound</span>: <span class="hljs-string">'44'</span>,
+  <span class="hljs-attr">goldspent</span>: <span class="hljs-string">'0'</span>,
+  <span class="hljs-attr">hp</span>: <span class="hljs-string">'0'</span>,
+  <span class="hljs-attr">int</span>: <span class="hljs-string">'12'</span>,
+  <span class="hljs-attr">killer</span>: <span class="hljs-string">'a goblin'</span>,
+  <span class="hljs-attr">kills</span>: <span class="hljs-string">'23'</span>,
+  <span class="hljs-attr">ktyp</span>: <span class="hljs-string">'pois'</span>,
+  <span class="hljs-attr">lv</span>: <span class="hljs-string">'0.1'</span>,
+  <span class="hljs-attr">lvl</span>: <span class="hljs-string">'2'</span>,
+  <span class="hljs-attr">mhp</span>: <span class="hljs-string">'14'</span>,
+  <span class="hljs-attr">mmhp</span>: <span class="hljs-string">'14'</span>,
+  <span class="hljs-attr">mmp</span>: <span class="hljs-string">'3'</span>,
+  <span class="hljs-attr">mp</span>: <span class="hljs-string">'3'</span>,
+  <span class="hljs-attr">name</span>: <span class="hljs-string">'FDmntl'</span>,
+  <span class="hljs-attr">place</span>: <span class="hljs-string">'D::2'</span>,
+  <span class="hljs-attr">potionsused</span>: <span class="hljs-string">'0'</span>,
+  <span class="hljs-attr">race</span>: <span class="hljs-string">'Spriggan'</span>,
+  <span class="hljs-attr">sc</span>: <span class="hljs-string">'25'</span>,
+  <span class="hljs-attr">scrollsused</span>: <span class="hljs-string">'0'</span>,
+  <span class="hljs-attr">sdam</span>: <span class="hljs-string">'3'</span>,
+  <span class="hljs-attr">seed</span>: <span class="hljs-string">'5894012356088655548'</span>,
+  <span class="hljs-attr">sh</span>: <span class="hljs-string">'0'</span>,
+  <span class="hljs-attr">sk</span>: <span class="hljs-string">'Stealth'</span>,
+  <span class="hljs-attr">sklev</span>: <span class="hljs-string">'6'</span>,
+  <span class="hljs-attr">start</span>: <span class="hljs-string">'20240003183332S'</span>,
+  <span class="hljs-attr">status</span>: <span class="hljs-string">'lethally poisoned (0 -> -13):gold'</span>,
+  <span class="hljs-attr">str</span>: <span class="hljs-string">'7'</span>,
+  <span class="hljs-attr">tdam</span>: <span class="hljs-string">'3'</span>,
+  <span class="hljs-attr">tiles</span>: <span class="hljs-string">'1'</span>,
+  <span class="hljs-attr">title</span>: <span class="hljs-string">'Sneak'</span>,
+  <span class="hljs-attr">tmsg</span>: <span class="hljs-string">'succumbed to a goblin\'s poison'</span>,
+  <span class="hljs-attr">turn</span>: <span class="hljs-string">'898'</span>,
+  <span class="hljs-attr">v</span>: <span class="hljs-string">'0.30-b1'</span>,
+  <span class="hljs-attr">vlong</span>: <span class="hljs-string">'0.30-b1-7-gcb88a99046'</span>,
+  <span class="hljs-attr">vsav</span>: <span class="hljs-string">'34.253'</span>,
+  <span class="hljs-attr">vsavrv</span>: <span class="hljs-string">'Git::0.30-b1-7-gcb88a99046'</span>,
+  <span class="hljs-attr">xl</span>: <span class="hljs-string">'2'</span> }
+</code></pre>
+    <p>
+      Now we just pull out the field which shows the game ended in a
+      win. That field is not technically present in fact. Luckily, as I say,
+      I've been here before and <a href="https://github.com/broquaint/soup-stash/blob/master/lib/soupstash/ingestlogfile/transformer.rb#L87C57-L87C77">happen to know</a> that if the <code>tmsg</code> field
+      begins <code>escaped with the Orb</code> then it's a winner (these days we
+      have a handy <a href="https://github.com/crawl/sequell/blob/master/docs/listgame.md">API doc</a> too!). So know we can filter for winning
+      games based on that info, so let's see how many winning games there
+      have been for 0.30 on webzook.net.
+    </p>
+    <h2>Data please</h2>
+    <p>
+      So we read from the file using a <code>node</code> adjacent API like <code>io</code> right?
+      Right? Only if you like <em>deprecated</em> libraries!
+    </p>
+    <p><img src="/assets/img/learning io deprecated.png" title="The io module docs in Deno where everything looks to be deprecated"> </p>
+    <p>
+      If I want to do something as innocent as read lines from a file what
+      should I be doing?
+    </p>
+    <p><img src="/assets/img/learning readlines deprecated.png" title="The io.readLines docs in Deno with a big deprecation warning"></p>
+    <p>
+      It should be a <em>squints suspiciously</em> a <strong>Web</strong> <strong>Streams</strong> API‽ No. No I dont' think so. The sweet embrace of deprecation warnings it is!
+    </p>
+    <p><img src="/assets/img/learning readlines redlines.png" title="Trying to use the io.readLines and failing"></p>
+    <p>
+      Apparently not. And even if it were it seems the API is like something
+      a <a href="https://docs.oracle.com/javase/8/docs/api/">90s Java library author</a> <a href="https://deno.land/std@0.210.0/io/mod.ts?s=readLines#Examples">might have written</a> (hey look
+      <a href="https://docs.oracle.com/javase/8/docs/api/java/nio/file/Files.html#readAllLines-java.nio.file.Path-">slurping all lines at once</a> landed in Java 8!).
+    </p>
+    <p>
+      Ok here I recognize I'm out of my depth and admit defeat, for now, and just pull out an elegant tool for more a
+      civilized age:
+    </p>
+    <pre><code>$ perl -nE '$tot++; $wins++ if /tmsg=escaped with the Orb/ } { say sprintf "%d wins out of a total %d games which is a win percentage of %.2f", $wins, $tot, ($wins / $tot * 100)' webzook-0.30.logfile 
+<strong>103</strong> wins out of a total <strong>13485</strong> games which is a win percentage of <strong>0.76</strong>
+</code></pre>
+    <p>
+      That's some nice data and means we have something useful to work with
+      (no surprise there!). And here is a good point to call it a day and
+      think back on what was learnt.
+    </p>
+    <h2>Going foreword</h2>
+    <p>Today I learnt:</p>
+    <ul>
+      <li>
+        A little about Deno: it mostly just works!
+      </li>
+      <li>
+        A little more about Code: how to create+open a workspace, run some
+        TypeScript in situ, configuring some things
+      </li>
+      <li>
+        That the DCSS logfile data is pleasantly stable (little to no change
+        in over 10 years!)
+      </li>
+      <li>
+        There are too many static site blogging options (and it's too boring
+        to bother blogging about)
+      </li>
+    </ul>
+    <p>
+      That's a good start! Next I want to be pulling data from a server
+      directly and getting a feed of wins.
+    </p>

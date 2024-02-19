@@ -1,0 +1,204 @@
+---
+layout: post
+title: "Easy as falling down stairs"
+date: 2024-01-29 15:13:13 +0700
+author: Dan Brook
+categories: blog learning
+---
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/atom-one-light.min.css" rel="stylesheet">
+    <h2>Stepping up for evaluation</h2>
+    <p>
+      Next up in the TypeScript learning journey — implementing <a href="https://github.com/kanaka/mal/blob/master/process/guide.md#step-2-eval">Step 2: Eval</a>
+      in <a href="https://github.com/kanaka/mal">Mal</a> (not the deferred functionality for Step 1 as
+      <a href="https://broquaint.com/blog/learning/2024/01/24/mal-for-me.html">mentioned previously</a>). This is where the the implementation goes
+      from turning strings into values to values into calculations.
+    </p>
+    <h2>Just add another layer of abstraction</h2>
+    <p>
+      While this is the first step on the way to putting the <em>programming</em>
+      in the programming language it's a relatively small step in terms of
+      the implementation (thank goodness for small steps I say!).
+    </p>
+    <p>
+      One of the first changes is introducing an "environment", which is to
+      say something that keeps track of the state of the program i.e
+      addressable things in the program. This was also my first introduction
+      to <a href="https://www.typescriptlang.org/docs/handbook/2/objects.html#index-signatures">index signatures</a> and where I began to see the ramifications of
+      the strucutral typing i.e you can't just treat objects as glorified
+      hash maps, the type checker needs <em>some</em> type info. So this lead to
+      another new type:
+    </p>
+    <pre><code class="hljs language-typescript"><span class="hljs-keyword">export</span> <span class="hljs-keyword">type</span> <span class="hljs-title class_">MalEnv</span> = {
+    [<span class="hljs-attr">index</span>: <span class="hljs-built_in">string</span>]: <span class="hljs-title class_">MalType</span>
+}
+</code></pre>
+    <p>
+      And the creation of the first, statically defined, functions for
+      calculating in this Mal implementation:
+    </p>
+    <pre><code class="hljs language-typescript"><span class="hljs-keyword">const</span> env: <span class="hljs-title class_">MalEnv</span> = {
+    <span class="hljs-string">'+'</span>: <span class="hljs-title function_">malCalc</span>(<span class="hljs-function">(<span class="hljs-params">a,b</span>) =></span> a + b),
+    <span class="hljs-string">'-'</span>: <span class="hljs-title function_">malCalc</span>(<span class="hljs-function">(<span class="hljs-params">a,b</span>) =></span> a - b),
+    <span class="hljs-string">'*'</span>: <span class="hljs-title function_">malCalc</span>(<span class="hljs-function">(<span class="hljs-params">a,b</span>) =></span> a * b),
+    <span class="hljs-string">'/'</span>: <span class="hljs-title function_">malCalc</span>(<span class="hljs-function">(<span class="hljs-params">a,b</span>) =></span> a / b),
+}
+</code></pre>
+    <blockquote>
+      <p>That looks a little too simple! Where are all the Mal types?</p>
+    </blockquote>
+    <p>
+      Sure, but do you <em>want</em> casting in your mathematical operations? This
+      was the original implementation (be prepared to avert your eyes):
+    </p>
+    <pre><code class="hljs language-typescript"><span class="hljs-keyword">const</span> env: <span class="hljs-title class_">MalEnv</span> = {
+    <span class="hljs-string">'+'</span>: { <span class="hljs-attr">type</span>: <span class="hljs-string">'function'</span>, <span class="hljs-attr">value</span>: (<span class="hljs-function">(<span class="hljs-params">a: MalType, b: MalType</span>) =></span> { <span class="hljs-attr">type</span>: <span class="hljs-string">'number'</span>, <span class="hljs-attr">value</span>: (a <span class="hljs-keyword">as</span> <span class="hljs-title class_">MalNumber</span>).<span class="hljs-property">value</span> + (b <span class="hljs-keyword">as</span> <span class="hljs-title class_">MalNumber</span>).<span class="hljs-property">value</span>)) } },
+    <span class="hljs-string">'-'</span>: { <span class="hljs-attr">type</span>: <span class="hljs-string">'function'</span>, <span class="hljs-attr">value</span>: (<span class="hljs-function">(<span class="hljs-params">a: MalType, b: MalType</span>) =></span> { <span class="hljs-attr">type</span>: <span class="hljs-string">'number'</span>, <span class="hljs-attr">value</span>: (a <span class="hljs-keyword">as</span> <span class="hljs-title class_">MalNumber</span>).<span class="hljs-property">value</span> - (b <span class="hljs-keyword">as</span> <span class="hljs-title class_">MalNumber</span>).<span class="hljs-property">value</span>)) } },
+    <span class="hljs-string">'*'</span>: { <span class="hljs-attr">type</span>: <span class="hljs-string">'function'</span>, <span class="hljs-attr">value</span>: (<span class="hljs-function">(<span class="hljs-params">a: MalType, b: MalType</span>) =></span> { <span class="hljs-attr">type</span>: <span class="hljs-string">'number'</span>, <span class="hljs-attr">value</span>: (a <span class="hljs-keyword">as</span> <span class="hljs-title class_">MalNumber</span>).<span class="hljs-property">value</span> * (b <span class="hljs-keyword">as</span> <span class="hljs-title class_">MalNumber</span>).<span class="hljs-property">value</span>)) } },
+    <span class="hljs-string">'/'</span>: { <span class="hljs-attr">type</span>: <span class="hljs-string">'function'</span>, <span class="hljs-attr">value</span>: (<span class="hljs-function">(<span class="hljs-params">a: MalType, b: MalType</span>) =></span> { <span class="hljs-attr">type</span>: <span class="hljs-string">'number'</span>, <span class="hljs-attr">value</span>: (a <span class="hljs-keyword">as</span> <span class="hljs-title class_">MalNumber</span>).<span class="hljs-property">value</span> / (b <span class="hljs-keyword">as</span> <span class="hljs-title class_">MalNumber</span>).<span class="hljs-property">value</span>)) } },
+}
+</code></pre>
+    <p>
+      You'd be forgiven if you lost the key addition, subtraction,
+      mulitplication and division operators in all that noise! But
+      unfortunately there's no way around all that casting—Mal functions
+      take N values of the union type <code>MalType</code> and produce another
+      <code>MalType</code>. You may also have missed the new Mal type of <code>MalFunc</code>
+      which is actually a two parter:
+    </p>
+    <pre><code class="hljs language-typescript"><span class="hljs-keyword">export</span> <span class="hljs-keyword">type</span> <span class="hljs-title class_">MalFuncSig</span> = <span class="hljs-function">(<span class="hljs-params">...vals: MalType[]</span>) =></span> <span class="hljs-title class_">MalType</span>
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">type</span> <span class="hljs-title class_">MalFunc</span> = {
+    <span class="hljs-attr">type</span>: <span class="hljs-string">'function'</span>,
+    <span class="hljs-attr">value</span>: <span class="hljs-title class_">MalFuncSig</span>
+}
+</code></pre>
+    <p>
+      There's the more concise implementation of my verbose description of
+      the Mal function type. And the reason the function signature (aka
+      <a href="https://www.typescriptlang.org/docs/handbook/2/functions.html#function-type-expressions">function type expression</a>) is separate is so we can reuse it in a
+      new layer of abstraction that simplifies creating new Mal values:
+    </p>
+    <pre><code class="hljs language-typescript"><span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> mal = {
+    <span class="hljs-attr">num</span>: <span class="hljs-keyword">function</span>(<span class="hljs-params">n: <span class="hljs-built_in">number</span></span>): <span class="hljs-title class_">MalNumber</span> {
+        <span class="hljs-keyword">return</span> { <span class="hljs-attr">type</span>: <span class="hljs-string">'number'</span>, <span class="hljs-attr">value</span>: n }
+    },
+    <span class="hljs-attr">func</span>: <span class="hljs-keyword">function</span>(<span class="hljs-params">f: MalFuncSig</span>): <span class="hljs-title class_">MalFunc</span> {
+        <span class="hljs-keyword">return</span> { <span class="hljs-attr">type</span>: <span class="hljs-string">'function'</span>, <span class="hljs-attr">value</span>: f }
+    },
+    <span class="hljs-attr">list</span>: <span class="hljs-keyword">function</span>(<span class="hljs-params">v: <span class="hljs-built_in">Array</span>&#x3C;MalType></span>): <span class="hljs-title class_">MalList</span> {
+        <span class="hljs-keyword">return</span> { <span class="hljs-attr">type</span>: <span class="hljs-string">'list'</span>, <span class="hljs-attr">values</span>: v }
+    }
+}
+</code></pre>
+    <p>
+      Now to bring it back to the earlier concisely defined environment I'll
+      create a high–order function<sup><a href="#high-order">1</a></sup> that takes a pure
+      TypeScript function, then closes over that to call it from a <code>MalFunc</code>
+      which calls it with numbers cast from a <code>MalType</code> and produces a
+      <code>MalType</code> on return (as is the requirement of the type).
+    </p>
+    <blockquote>
+      <p>Huh?</p>
+    </blockquote>
+    <p>I'll let the code speak for itself.</p>
+    <pre><code class="hljs language-typescript"><span class="hljs-keyword">function</span> <span class="hljs-title function_">malCalc</span>(<span class="hljs-params">f: (x: <span class="hljs-built_in">number</span>, y: <span class="hljs-built_in">number</span>) => <span class="hljs-built_in">number</span></span>): <span class="hljs-title class_">MalFunc</span> {
+    <span class="hljs-keyword">return</span> mal.<span class="hljs-title function_">func</span>(<span class="hljs-function">(<span class="hljs-params">a: MalType, b: MalType</span>) =></span> {
+        <span class="hljs-keyword">const</span> x = a <span class="hljs-keyword">as</span> <span class="hljs-title class_">MalNumber</span>
+        <span class="hljs-keyword">const</span> y = b <span class="hljs-keyword">as</span> <span class="hljs-title class_">MalNumber</span> 
+        <span class="hljs-keyword">return</span> mal.<span class="hljs-title function_">num</span>(<span class="hljs-title function_">f</span>(x.<span class="hljs-property">value</span>, y.<span class="hljs-property">value</span>))
+    })
+}
+</code></pre>
+    <p>
+      The rest of the implementation is fairly rote and isn't interesting in
+      TypeScript specific ways but for the curious you can see how symbols
+      are evaluated in the <a href="https://github.com/broquaint/mal/commit/1f4b4b633684bb924e38ef1242229f8a8c2a9403">step2 commit</a>.
+    </p>
+    <h2>Deferring escape</h2>
+    <p>
+      So I deferred the deferrables of Step 1 because in previous
+      implementations of Mal this was one of the hardest parts,
+      specifically—correctly escaping strings.
+    </p>
+    <blockquote>
+      <p>But how hard can escaping strings be?</p>
+    </blockquote>
+    <p>
+      You might ask. It's not hard when you know how to do it, it just
+      requires a certain amount of care and attention when the host language
+      and the language being implemented share the same escape character i.e
+      <a href="https://en.wikipedia.org/wiki/Escape_character"><em>the</em> escape character</a> aka backslash. It certainly made my head spin
+      to make sure that the escapes in Kotlin (my first implementation) were
+      <a href="https://github.com/broquaint/mal/commit/9847ea161d43020860f3936cce3e260f936d8522">correctly representing</a> the escapes in Mal.
+    </p>
+    <p>To get to the point we need to escape the escapes on the way in:</p>
+    <pre><code class="hljs language-typescript"><span class="hljs-comment">// This lives in types.ts but included here for clarity.</span>
+<span class="hljs-keyword">type</span> <span class="hljs-title class_">EscapeMap</span> {
+    <span class="hljs-keyword">readonly</span> [<span class="hljs-attr">index</span>: <span class="hljs-built_in">string</span>]: <span class="hljs-built_in">string</span>;
+}
+<span class="hljs-keyword">const</span> <span class="hljs-attr">escapeMap</span>: <span class="hljs-title class_">EscapeMap</span> = { <span class="hljs-string">'\\'</span>: <span class="hljs-string">'\\'</span>, <span class="hljs-string">'n'</span>: <span class="hljs-string">"\n"</span>, <span class="hljs-string">'"'</span>: <span class="hljs-string">'"'</span> }
+
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">read_string_value</span>(<span class="hljs-params">v: <span class="hljs-built_in">string</span></span>): <span class="hljs-title class_">MalString</span> {
+    <span class="hljs-keyword">if</span>(!v.<span class="hljs-title function_">match</span>(<span class="hljs-regexp">/"$/</span>) || v.<span class="hljs-property">length</span> === <span class="hljs-number">1</span>)
+        <span class="hljs-keyword">throw</span> <span class="hljs-string">'Unexpected end of input, unbalanced quote?'</span>
+    <span class="hljs-keyword">const</span> sv = v.<span class="hljs-title function_">replace</span>(<span class="hljs-regexp">/^"|"$/g</span>, <span class="hljs-string">''</span>)
+        .<span class="hljs-title function_">replace</span>(<span class="hljs-regexp">/\\(.)/g</span>, <span class="hljs-function">(<span class="hljs-params">_, c</span>) =></span> c <span class="hljs-keyword">in</span> escapeMap ? escapeMap[c] : c)
+    <span class="hljs-keyword">return</span> { <span class="hljs-attr">type</span>: <span class="hljs-string">'string'</span>, <span class="hljs-attr">value</span>: sv }
+}
+</code></pre>
+    <p>
+      So given a string that <em>looks</em> like a string representation<sup><a href="#string-like">2</a></sup>—drop the quotes and replace double-escapes with
+      single escapes, escape + <code>n</code> as newline and escape + quote with just the
+      quote which results in a string where the internals represent the
+      intended value. This can be seen when printed out (by sticking in a
+      <code>console.log</code> at the appropriate moment), relevant part in <strong>bold</strong>:
+    </p>
+    <pre><code>user> "foo\nbar\\baz\"quux"
+<strong>foo
+bar\baz"quux</strong>
+"foo\nbar\\baz\"quux"
+</code></pre>
+    <p>
+      And there we can see the round–tripped value produced by <code>pr_str</code>:
+    </p>
+    
+    <pre><code class="hljs language-typescript"><span class="hljs-keyword">const</span> <span class="hljs-attr">unescapeMap</span>: <span class="hljs-title class_">EscapeMap</span> = { <span class="hljs-string">'\\'</span>: <span class="hljs-string">'\\\\'</span>, <span class="hljs-string">"\n"</span>: <span class="hljs-string">'\\n'</span>, <span class="hljs-string">'"'</span>: <span class="hljs-string">'\\"'</span> }
+<span class="hljs-keyword">const</span> unescapeRe = <span class="hljs-regexp">/\\|\n|"/g</span>
+
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">readable_string</span>(<span class="hljs-params">value: <span class="hljs-built_in">string</span></span>): <span class="hljs-built_in">string</span> {
+    <span class="hljs-keyword">return</span> value.<span class="hljs-title function_">replace</span>(unescapeRe, <span class="hljs-function"><span class="hljs-params">c</span> =></span> unescapeMap[c])
+}
+</code></pre>
+<p>
+      Which, on the way out, will—escape to double escape, newline to escape + <code>n</code> and
+      quote to escape + quote. Both approaches are <em>slightly</em> different to
+      minimize the need to escape escapes in TypeScript and avoid confusion
+      with the level of escaping in Mal.
+    </p>
+    <h2>Wrapping up</h2>
+    <p>
+      The other deferrables are either very straightforward, like
+      implementing keywords, comments and vectors; slightly more interesting
+      like implementing maps; or not necessary until much later, like
+      quoting, quasiquoting, unquoting etc (which is where the "code as
+      data" in Lisps happens). So I'll leave step1 for now, leaving the
+      latter for later, and revisit them as they crop up in future steps.
+    </p>
+    <p>
+      In this step I learnt about TypeScripts <a href="https://www.typescriptlang.org/docs/handbook/2/functions.html#function-type-expressions">function type expressions</a>
+      and its <a href="https://www.typescriptlang.org/docs/handbook/2/objects.html#index-signatures">index signatures</a>, both useful tools to have in one's belt when
+      writing any amount of TypeScript I imagine.
+    </p>
+    <h3>Footnotes</h3>
+    <p>
+      <sup><a name="high-order">1</a></sup> Perhaps it's because I'm not a mathematician
+      (would that I were!) but giving a specific name to functions that
+      produce functions always struck me as a little odd and confusing. Also
+      technically that <em>isn't</em> a high-order as it returns an object that
+      we're using as a representation of a function.
+    </p>
+    <p>
+      <sup><a name="string-like">2</a></sup> This function is dispatched on the basis that
+      i.e <code>v.indexOf('"') === 0</code> so it's known to look like the <em>start</em> of a string.
+    </p>
+
+

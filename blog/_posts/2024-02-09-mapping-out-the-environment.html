@@ -1,0 +1,136 @@
+---
+layout: post
+title: "Mapping out the environment"
+date: 2024-02-09 15:48:13 +0700
+author: Dan Brook
+categories: blog learning
+---
+
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/atom-one-light.min.css" rel="stylesheet">
+
+    <p>
+      The only logical step from <a href="https://broquaint.com/blog/learning/2024/01/29/easy-as-falling-down-stairs.html">Step 2: Eval</a> has got to be <a href="https://github.com/kanaka/mal/blob/master/process/guide.md#step-3-environments">Step 3: Environments</a>.
+      Fortunately this step is another small one wherein variables can be
+      defined and bindings introduced. This means it will also make for a
+      small post, speaking of which:
+    </p>
+    <h2>Once more with generics</h2>
+    <p>
+      The implementation here is pretty straightforward: we introduce an
+      <code>Env</code> class which acts like a linked lookup table like so:
+    </p>
+    <pre><code class="hljs language-typescript"><span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">Env</span> {
+    <span class="hljs-attr">outer</span>: <span class="hljs-title class_">Env</span> | <span class="hljs-literal">null</span>;
+    <span class="hljs-attr">data</span>: { [<span class="hljs-attr">index</span>: <span class="hljs-built_in">string</span>]: <span class="hljs-title class_">MalType</span> };
+
+    <span class="hljs-title function_">constructor</span>(<span class="hljs-params">outer?: Env</span>) {
+        <span class="hljs-variable language_">this</span>.<span class="hljs-property">outer</span> = outer ?? <span class="hljs-literal">null</span>;
+        <span class="hljs-variable language_">this</span>.<span class="hljs-property">data</span>  = {}
+    }
+
+    <span class="hljs-title function_">set</span>(<span class="hljs-attr">k</span>: <span class="hljs-title class_">MalSymbol</span>, <span class="hljs-attr">v</span>: <span class="hljs-title class_">MalType</span>): <span class="hljs-title class_">MalType</span> {
+        <span class="hljs-variable language_">this</span>.<span class="hljs-property">data</span>[k.<span class="hljs-property">value</span>] = v
+        <span class="hljs-keyword">return</span> v
+    }
+
+    <span class="hljs-title function_">find</span>(<span class="hljs-attr">k</span>: <span class="hljs-title class_">MalSymbol</span>): <span class="hljs-title class_">Env</span> | <span class="hljs-literal">null</span> {
+        <span class="hljs-keyword">if</span>(k.<span class="hljs-property">value</span> <span class="hljs-keyword">in</span> <span class="hljs-variable language_">this</span>.<span class="hljs-property">data</span>)
+            <span class="hljs-keyword">return</span> <span class="hljs-variable language_">this</span>
+        <span class="hljs-keyword">else</span>
+            <span class="hljs-keyword">if</span>(<span class="hljs-variable language_">this</span>.<span class="hljs-property">outer</span>)
+                <span class="hljs-keyword">return</span> <span class="hljs-variable language_">this</span>.<span class="hljs-property">outer</span>.<span class="hljs-title function_">find</span>(k)
+            <span class="hljs-keyword">else</span>
+                <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>
+    }
+
+    <span class="hljs-title function_">get</span>(<span class="hljs-attr">k</span>: <span class="hljs-title class_">MalSymbol</span>): <span class="hljs-title class_">MalType</span> {
+        <span class="hljs-keyword">const</span> env = <span class="hljs-variable language_">this</span>.<span class="hljs-title function_">find</span>(k)
+        <span class="hljs-keyword">if</span>(env !== <span class="hljs-literal">null</span>)
+            <span class="hljs-keyword">return</span> env.<span class="hljs-property">data</span>[k.<span class="hljs-property">value</span>]!
+        <span class="hljs-keyword">else</span>
+            <span class="hljs-comment">// Slightly awkward error phrasing to satisfy tests.</span>
+            <span class="hljs-keyword">throw</span> <span class="hljs-string">`The symbol '<span class="hljs-subst">${k.value}</span>' not found in the environment`</span>
+    }
+}
+</code></pre>
+    <p>
+      The only fun new (to me) TypeScript feature there is <code>??</code>, aka the
+      <a href="https://www.typescriptlang.org/docs/handbook/release-notes/typescript-3-7.html#nullish-coalescing">nullish coalescing operator</a><a href="#nullish-blog"><sup>1</sup></a>, which is a
+      superb addition to the language (alongside <a href="https://www.typescriptlang.org/docs/handbook/release-notes/typescript-3-7.html#optional-chaining">optional chaining</a> which
+      CoffeeScript <a href="https://coffeescript.org/#0.3.0">added over 14 years ago</a> at the time of writing<a href="#ideal-language"><sup>2</sup></a>).
+      Curious to see what the compiled JavaScript <a href="https://gist.github.com/broquaint/47b41f119dcc0def381db04d7a651a18">would look like</a> I ran
+      <code>deno bundle</code> and saw an unadorned <code>??</code>! So here I am shocked to
+      discover that this operator, and optional chaining, are
+      <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Nullish_coalescing">now in JavaScript</a>! What else have I missed …
+    </p>
+    <p>
+      At any rate the other thing I learnt in this step was the
+      <a href="https://www.typescriptlang.org/docs/handbook/2/typeof-types.html"><code>typeof</code> type operator</a>, of which I was aware but hadn't had an
+      opportunity to use in anger. Where I needed it was in making the
+      generation of lists and vectors generic in <code>eval_ast</code>. This can be
+      seen more apparently in the original code:
+    </p>
+    <pre style="font-size: 0.9em;"><code class="hljs language-typescript"><span class="hljs-keyword">case</span> <span class="hljs-string">'list'</span>: {
+    <span class="hljs-keyword">return</span> ast.<span class="hljs-property">values</span>.<span class="hljs-title function_">reduce</span>(
+        <span class="hljs-function">(<span class="hljs-params">a: MalList, b: MalType</span>) =></span> mal.<span class="hljs-title function_">list</span>(a.<span class="hljs-property">values</span>.<span class="hljs-title function_">concat</span>([<span class="hljs-title function_">EVAL</span>(b, env)])),
+        mal.<span class="hljs-title function_">list</span>([])
+    );
+}
+ <span class="hljs-keyword">case</span> <span class="hljs-string">'vector'</span>: {
+     <span class="hljs-keyword">return</span> ast.<span class="hljs-property">values</span>.<span class="hljs-title function_">reduce</span>(
+         <span class="hljs-function">(<span class="hljs-params">a: MalVector, b: MalType</span>) =></span> mal.<span class="hljs-title function_">vector</span>(a.<span class="hljs-property">values</span>.<span class="hljs-title function_">concat</span>([<span class="hljs-title function_">EVAL</span>(b, env)])),
+         mal.<span class="hljs-title function_">vector</span>([])
+     );
+ }
+</code></pre>
+    <p>
+      That looks awfully repetitious doesn't it? If there were a third
+      instance of that code, for another sequence–related data type say,
+      then it would absolutely warrant factoring out. However I'm doing
+      this for fun and education so I refactored it anyway with the help of
+      <code>typeof</code> and some under the covers parametric typing to look like this:
+    </p>
+    <pre style="font-size: 0.9em;"><code class="hljs language-typescript"><span class="hljs-keyword">case</span> <span class="hljs-string">'list'</span>:
+<span class="hljs-keyword">case</span> <span class="hljs-string">'vector'</span>: {
+    <span class="hljs-keyword">const</span> valGen = mal[ast.<span class="hljs-property">type</span>]
+    <span class="hljs-keyword">const</span> seed = <span class="hljs-title function_">valGen</span>([])
+    <span class="hljs-keyword">return</span> ast.<span class="hljs-property">values</span>.<span class="hljs-title function_">reduce</span>(
+        <span class="hljs-function">(<span class="hljs-params">a: <span class="hljs-keyword">typeof</span> seed, b: MalType</span>) =></span> <span class="hljs-title function_">valGen</span>(a.<span class="hljs-property">values</span>.<span class="hljs-title function_">concat</span>([<span class="hljs-title function_">EVAL</span>(b, env)])),
+        seed
+    )
+}
+</code></pre>
+    <p>
+      There we have <code>valGen</code> as our type–safe value generator for the
+      relevant Mal type. Then we aggregate to a new value using the <code>typeof</code>
+      the <code>seed</code> value, as seen in the <code>reduce</code> function signature type and
+      the TypeScript checker is perfectly happy with the situation and
+      what's more the tests all pass. Perhaps not the <em>most</em> effective usage
+      of the <code>typeof</code> type operator, using <code>MalList | MalVector</code> in its
+      stead would also suffice, but it is more concise and, one might even
+      say, apt.
+    </p>
+    <h2>Conclusion</h2>
+    <p>
+      The type system in TypeScript continues to impress me, even when I
+      think I don't need to be impressed any more. I've also been tangling
+      with <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map"><code>Map</code>s</a> <a href="https://github.com/broquaint/mal/commit/1dde805e36df74d3b8e27f5e0a315f6b024387c9">behind the scenes</a>, but that won't get interesting until
+      the Mal maps need to properly function (maybe not until <a href="https://github.com/kanaka/mal/blob/master/process/guide.md#step-9-try">Step 9: Try</a>?).
+      And one must not get too distracted when the next step,
+      <a href="https://github.com/kanaka/mal/blob/master/process/guide.md#step-4-if-fn-do">Step 4: If Fn Do</a>, is right around the corner—the step where we add
+      functions to the functional programming language!
+    </p>
+    <h3>Footnotes</h3>
+    <p>
+      <a name="nullish-blog"><sup>1</sup></a> Thanks to Marius Schulz's blog entry <a href="https://mariusschulz.com/blog/nullish-coalescing-the-operator-in-typescript">Nullish Coalescing: The ?? Operator in TypeScript</a>
+      for turning up in search results! Searching for an equivalent, or even
+      the literal operator name, in the <a href="https://www.typescriptlang.org/docs/handbook/intro.html">official handbook</a> didn't get me
+      anywhere but I knew that <em>something</em> like that existed in TypeScript.
+    </p>
+    <p>
+      <a name="ideal-language"><sup>2</sup></a> I think my ideal JavaScript would be a
+      combination of CoffeeScript's expressive syntax with TypeScript's gradual
+      typing. Maybe I just want to learn <a href="https://elm-lang.org/">Elm</a> finally?
+    </p>
+
+

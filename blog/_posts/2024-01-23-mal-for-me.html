@@ -1,0 +1,487 @@
+---
+layout: post
+title: "Mal for me"
+date: 2024-01-24 15:33:13 +0700
+author: Dan Brook
+categories: blog learning
+---
+
+<link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/atom-one-light.min.css" rel="stylesheet">
+
+    <h2>Learning with gusto</h2>
+    <p>
+      While I am enjoying putting the DCSS win follower together I feel like
+      I could be learning, and writing, more TypeScript. As such it's time
+      to <a href="https://github.com/kanaka/mal/">Make A Lisp</a> in TypeScript. Not because it hasn't been done before,
+      as it surely has countless times already, but because <em>I</em> haven't done
+      it before. In TypeScript.
+    </p>
+    <h2>Making A Lisp</h2>
+    <p>
+      To begin with I'll take a branch off <a href="https://github.com/kanaka/mal/tree/master">master</a> and gut the
+      existing <a href="https://github.com/kanaka/mal/tree/master/impls/ts">TypeScript implementation</a>. That way I'm starting from a
+      reasonably blank slate without having to do too much finicky work with
+      shell scripts and <code>Makefile</code>s. However—I do want to use <a href="https://deno.land/">deno</a> and
+      the current implementation uses <code>node</code> and the <a href="https://www.npmjs.com/package/typescript">typescript package</a>
+      so I'll need to do <em>some</em> finicky work.
+    </p>
+    <p>Firstly is <code>Makefile</code> trickery needed?</p>
+    <blockquote>
+      <p>
+        If your implementation language is a compiled language, then you
+        should also add a Makefile at the top level of your implementation
+        directory.
+      </p>
+    </blockquote>
+    <p>
+      I don't think so thanks to <code>deno</code> natively running TypeScript. Now we
+      just need to fix the <code>run</code> script file to run <code>deno</code>, nice and
+      straight forward:
+    </p>
+    <pre><code class="hljs language-diff"><span class="hljs-deletion">-exec node $(dirname $0)/${STEP:-stepA_mal}.js "${@}"</span>
+<span class="hljs-addition">+exec deno run -A $(dirname $0)/${STEP:-stepA_mal}.js "${@}"</span>
+</code></pre>
+    <p>
+      Then I just need to implement the braindead simple <code>step0_repl.ts</code> and
+      I'll be on my way to making a Lisp. Just need a <a href="https://www.gnu.org/software/readline/">readline</a> library
+      ... oh dear. This way surely lies madness. Let's start with a library
+      that speaks <code>readline</code> called <a href="https://deno.land/x/reedline_deno@0.17.1">reedline_deno</a> which looks to use
+      Rust's <a href="https://docs.rs/reedline/">reedline</a>:
+    </p>
+    <pre><code>§ deno run --unstable -A step0_repl.ts 
+Downloading https://github.com/sigmaSd/reedline-deno/releases/download/0.17.0/libreedline_rust_x86_64.dylib.dylib
+error: Uncaught (in promise) Error: Could not find https://github.com/sigmaSd/reedline-deno/releases/download/0.17.0/libreedline_rust_x86_64.dylib.dylib
+            throw new Error(`Could not find ${url}`);
+                  ^
+    at download (https://deno.land/x/plug@1.0.2/download.ts:254:19)
+    at eventLoopTick (ext:core/01_core.js:181:11)
+    at async Module.dlopen (https://deno.land/x/plug@1.0.2/mod.ts:155:25)
+    at async Function.create (https://deno.land/x/reedline_deno@0.17.1/src/mod.ts:41:17)
+    at async file:///Users/dbrook/dev/mal/impls/ts/step0_repl.ts:16:12
+</code></pre>
+    <p>
+      The <code>.dylib.dylib</code> extension in the error message doesn't bode well. A
+      quick look at the <a href="https://github.com/sigmaSd/reedline-deno/issues?q=is%3Aissue+is%3Aclosed">GitHub issues</a> for the library suggests this isn't
+      a problem others have faced so I'm going to commit to a tactical
+      retreat and roll my own.
+    </p>
+    <p>
+      Hang on a second, <code>deno</code> already provides a simple function for doing
+      exactly what I need! Thanks to <a href="https://stackoverflow.com/users/7475145/aditya-kumar">ADITYA KUMAR</a> for his helpful
+      <a href="https://stackoverflow.com/a/66508618">StackOverflow answer</a> that points to <a href="https://deno.land/api@v1.39.4?s=prompt">prompt</a>. Our REPL for <code>step0_repl</code>
+      looks like this:
+    </p>
+    <pre><code class="hljs language-typescript"><span class="hljs-keyword">let</span> line = <span class="hljs-title function_">prompt</span>(<span class="hljs-string">'user>'</span>)
+<span class="hljs-keyword">while</span> (line !== <span class="hljs-literal">null</span>) {
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-title function_">rep</span>(line));
+  line = <span class="hljs-title function_">prompt</span>(<span class="hljs-string">'user>'</span>)
+}
+</code></pre>
+    <p>
+      It may not have the user input affordances that you'd <em>want</em> from a
+      REPL but the tests are now passing!
+    </p>
+    <pre><code>TEST RESULTS (for ../tests/step0_repl.mal):
+    0: soft failing tests
+    0: failing tests
+   24: passing tests
+   24: total tests
+</code></pre>
+    <h2>Step 2 - step1</h2>
+    <p>
+      The next step requires reading an input, parsing it and then printing
+      it back out again. It doesn't sound terribly onerous but this is
+      usually the point at which one <em>actually</em> learns the implementation
+      language as you need to take some input and turn it into local
+      representations. So we're talking learning at least the local
+      abstractions, possibly some of the local type theory and likely
+      starting to create libraries rather than just scripts (as I have done
+      so far).
+    </p>
+    <p>
+      Let's begin: the <a href="https://github.com/kanaka/mal/blob/master/process/guide.md#step-1-read-and-print">wording of step1</a> takes a little unpacking but the
+      gist is we need some functions which take strings, split them up,
+      produce some values in the Mal domain and then turn them <em>back</em> into strings. So something like:
+    </p>
+    <pre><code class="hljs language-typescript"><span class="hljs-comment">// types.ts</span>
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">type</span> <span class="hljs-title class_">MalType</span> = {}
+
+<span class="hljs-comment">// reader.ts</span>
+<span class="hljs-keyword">import</span> { <span class="hljs-title class_">MalType</span> } <span class="hljs-keyword">from</span> <span class="hljs-string">'./types.ts'</span>
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">read_str</span>(<span class="hljs-params">input: <span class="hljs-built_in">string</span></span>): <span class="hljs-title class_">MalType</span> {
+    <span class="hljs-keyword">return</span> <span class="hljs-title function_">read_form</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">Reader</span>(<span class="hljs-title function_">tokenize</span>(input)))
+}
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">tokenize</span>(<span class="hljs-params">input: <span class="hljs-built_in">string</span></span>): <span class="hljs-title class_">Array</span>&#x3C;<span class="hljs-built_in">string</span>> {
+    <span class="hljs-keyword">return</span> []
+}
+
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">read_form</span>(<span class="hljs-params">r: Reader</span>): <span class="hljs-title class_">MalType</span> {
+    <span class="hljs-keyword">return</span> {}
+}
+
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">Reader</span> {
+    <span class="hljs-attr">tokens</span>: <span class="hljs-title class_">Array</span>&#x3C;<span class="hljs-built_in">string</span>>;
+    pos = <span class="hljs-number">0</span>;
+
+    <span class="hljs-title function_">constructor</span>(<span class="hljs-params">tokens: <span class="hljs-built_in">Array</span>&#x3C;<span class="hljs-built_in">string</span>></span>) {
+        <span class="hljs-variable language_">this</span>.<span class="hljs-property">tokens</span> = tokens
+    }
+}
+
+<span class="hljs-comment">// printer.rs</span>
+<span class="hljs-keyword">import</span> { <span class="hljs-title class_">MalType</span> } <span class="hljs-keyword">from</span> <span class="hljs-string">'./types.ts'</span>
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">pr_str</span>(<span class="hljs-params">v: MalType</span>): <span class="hljs-title class_">String</span> {
+    <span class="hljs-keyword">return</span> <span class="hljs-string">''</span>
+}
+</code></pre>
+    <p>
+      There we introduce the <code>MalType</code> which is will be the base type for
+      all other Mal values (more on this later!). Then we have a function—<code>read_str</code>—that will
+      take an input, tokenize it, feed that to a <code>Reader</code> which in turn is
+      consumed by <code>read_form</code> to produce the final <code>MalType</code>
+      instance. Lastly there's <code>pr_str</code> which takes a <code>MalType</code> and turns it
+      back into something fit for print i.e a <code>string</code>.
+    </p>
+    <p>
+      Now the <code>READ</code> &#x26; <code>PRINT</code> functions of <code>step1_read_print.ts</code> will, with the appropriate
+      imports, call the new <code>read_str</code> and <code>print_str</code> functions:
+    </p>
+    <pre><code class="hljs language-typescript"><span class="hljs-keyword">function</span> <span class="hljs-title function_">READ</span>(<span class="hljs-params">s: <span class="hljs-built_in">string</span></span>): <span class="hljs-title class_">MalType</span> {
+    <span class="hljs-keyword">return</span> <span class="hljs-title function_">read_str</span>(s)
+}
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">EVAL</span>(<span class="hljs-params">v: MalType</span>): <span class="hljs-title class_">MalType</span> {
+    <span class="hljs-keyword">return</span> v
+}
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">PRINT</span>(<span class="hljs-params">v: MalType</span>): <span class="hljs-built_in">string</span> {
+    <span class="hljs-keyword">return</span> <span class="hljs-title function_">pr_str</span>(v)
+}
+</code></pre>
+    <p>Let's see how far that gets us:</p>
+    <pre><code>$ make "test^ts^step1"
+...
+TEST RESULTS (for ../tests/step1_read_print.mal):
+   19: soft failing tests
+   97: failing tests
+    1: passing tests
+  117: total tests
+</code></pre>
+    <p>
+      It compiles and doesn't produce errors so that is certainly
+      progress. Now I'll just fill in those gaps.
+    </p>
+    <h2>What I learnt about types in TypeScript</h2>
+    <p>
+      Let me jump into the future to describe the past as I couldn't
+      document this process as it happened :-
+    </p>
+    <p>
+      My implementation of the reader was relatively straightforward, I used
+      an earlier <a href="https://github.com/broquaint/mal/commit/5eb74c7f8d0a40dee8d76a389c63addd7230bd4c">Kotlin implementation</a> of step1 to jog my memory and
+      speed things along. Its easy mix of functions and classes made it a
+      good match for TypeScript and the type systems, at a glance, <em>seem</em> to
+      bear a resemblance.
+    </p>
+    <p>
+      This also meant I bunged in a bunch of types that seemed sensible to
+      me, and the compiler patiently nodded at, in <code>types.ts</code> ,and moved
+      along my merry way. Ah blissful ignorance …
+    </p>
+    <p>
+      At the point I go to reckon with those types in <code>pr_str</code> is when I
+      realise that my naive understanding of types in TypeScript was
+      flawed. Those initial types I created looked like this:
+    </p>
+    <pre><code class="hljs language-typescript"><span class="hljs-keyword">export</span> <span class="hljs-keyword">interface</span> <span class="hljs-title class_">MalType</span> {}
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">type</span> <span class="hljs-title class_">MalList</span> = <span class="hljs-title class_">MalType</span> &#x26; {
+    <span class="hljs-attr">values</span>: <span class="hljs-title class_">Array</span>&#x3C;<span class="hljs-title class_">MalType</span>>
+}
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">interface</span> <span class="hljs-title class_">MalAtom</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">MalType</span> { }
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">type</span> <span class="hljs-title class_">MalSymbol</span> = <span class="hljs-title class_">MalAtom</span> &#x26; { <span class="hljs-attr">sym</span>: <span class="hljs-built_in">string</span> }
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">type</span> <span class="hljs-title class_">MalNumber</span> = <span class="hljs-title class_">MalAtom</span> &#x26; { <span class="hljs-attr">num</span>: <span class="hljs-built_in">number</span> }
+</code></pre>
+    <p>
+      And what I wanted to do was render the various types printable by
+      matching/dispatching based on type, rather like my initial Kotlin
+      implementation (and similarly <a href="https://github.com/broquaint/mal/commit/e3d5f646d77d7aac2f475ef17d936773f77219ae#diff-0d8e474d1b9f5306eb90699ed5183f475cd2aa3c8ca7f5742741b3529005225d">Rust implementation</a>):
+    </p>
+    <pre><code class="hljs language-kotlin"><span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">pr_str</span><span class="hljs-params">(v: <span class="hljs-type">MalType</span>)</span></span> : String {
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">when</span>(v) {
+        <span class="hljs-keyword">is</span> MalList   -> {
+            <span class="hljs-string">"("</span> + v.atoms.map { pr_str(it) }.joinToString(<span class="hljs-string">" "</span>) + <span class="hljs-string">")"</span>
+        }
+        <span class="hljs-keyword">is</span> MalNumber -> v.number.toString()
+        <span class="hljs-keyword">is</span> MalSymbol -> v.sym
+        <span class="hljs-keyword">else</span> -> <span class="hljs-string">""</span>
+    }
+}
+</code></pre>
+    <p>
+      So there I am, assuming types are first class values that are
+      addressable at runtime and I can deal with the squiggly reds in a
+      moment:
+    </p>
+    <pre><code class="hljs language-typescript"><span class="hljs-keyword">import</span> { <span class="hljs-title class_">MalType</span>, <span class="hljs-title class_">MalList</span>, <span class="hljs-title class_">MalSymbol</span>, <span class="hljs-title class_">MalNumber</span> } <span class="hljs-keyword">from</span> <span class="hljs-string">'./types.ts'</span>
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">pr_str</span>(<span class="hljs-params">v: MalType</span>): <span class="hljs-built_in">string</span> {
+    <span class="hljs-keyword">switch</span>(v) {
+        <span class="hljs-keyword">case</span> <span class="hljs-title class_">MalList</span>:
+            <span class="hljs-keyword">return</span> <span class="hljs-string">"("</span> + v.<span class="hljs-property">values</span>.<span class="hljs-title function_">map</span>(pr_str).<span class="hljs-title function_">join</span>(<span class="hljs-string">" "</span>) + <span class="hljs-string">")"</span>
+        <span class="hljs-keyword">case</span> <span class="hljs-title class_">MalNumber</span>:
+            <span class="hljs-keyword">return</span> v.<span class="hljs-property">num</span>
+        <span class="hljs-keyword">case</span> <span class="hljs-title class_">MalSymbol</span>:
+            <span class="hljs-keyword">return</span> v.<span class="hljs-property">sym</span>
+        <span class="hljs-attr">default</span>:
+            <span class="hljs-keyword">throw</span> <span class="hljs-string">"Unrecognised value type "</span> + <span class="hljs-keyword">typeof</span> v
+    }
+}
+</code></pre>
+    <p>Let's see what they're about:</p>
+    <pre><code>'MalList' only refers to a type, but is being used as a value here.deno-ts(2693)
+Property 'values' does not exist on type 'MalType'.
+  Property 'values' does not exist on type 'MalNumber'.deno-ts(2339)
+'MalNumber' only refers to a type, but is being used as a value here.deno-ts(2693)
+Property 'num' does not exist on type 'MalType'.
+  Property 'num' does not exist on type 'MalList'.deno-ts(2339)
+'MalSymbol' only refers to a type, but is being used as a value here.deno-ts(2693)
+Property 'sym' does not exist on type 'MalType'.
+  Property 'sym' does not exist on type 'MalList'.deno-ts(2339)
+</code></pre>
+    <p>
+      To the TypeScript aficianados I'm sure my error is apparent but here
+      is where the penny began to drop for me—types in TypeScript are not in
+      fact like types in Kotlin or Rust but something a little different.
+    </p>
+    <p>
+      In case the situation isn't apparent: I had <em>assumed</em> that, being a
+      modern statically typed language, that types in TypeScript would in
+      turn be first class objects. This isn't the case and, upon reflecting
+      on the matter, it makes sense that they aren't first class objects.
+    </p>
+    <p>
+      To get to the heart of the matter let's firstly refer to the
+      <a href="https://github.com/Microsoft/TypeScript/blob/v1.8.10/doc/spec.md#1">TypeScript Language Specification</a> to get some insight
+      in to why this is the way it is:
+    </p>
+    <blockquote>
+      <p>The TypeScript compiler performs only file-local transformations on TypeScript programs and does not re-order variables declared in TypeScript. This leads to JavaScript output that closely matches the TypeScript input. TypeScript does not transform variable names, making tractable the direct debugging of emitted JavaScript.</p>
+    </blockquote>
+    <p>
+      An implication we can derive from those statements is that whatever
+      type system exists in TypeScript it doesn't have any runtime component
+      in JavaScript which in turn means there isn't (obviously) a logical
+      way to represent types <em>in</em> JavaScript.
+    </p>
+    <p>Then if we look at <a href="https://users.soe.ucsc.edu/~abadi/Papers/FTS-submitted.pdf">Understanding TypeScript</a> in the <strong>Design of
+TypeScript</strong> section we have it spelled out even more clearly:</p>
+    <blockquote>
+      <p>Full erasure: The types of a TypeScript program leave no trace in the JavaScript emitted by the compiler. There are no run-time representations of types, and hence no run-time type checking. Current dynamic techniques for “type checking” in JavaScript programs, such as checking for the presence of certain properties, or the values of certain strings, may not be perfect, but good enough.</p>
+    </blockquote>
+    <p>
+      This (latterly) has cemented my understanding of what types are <em>not</em>
+      but it was in implementing a functioning <code>pr_str</code>, with reference to
+      <a href="https://medium.com/technogise/type-safe-and-exhaustive-switch-statements-aka-pattern-matching-in-typescript-e3febd433a7a">other</a> <a href="https://www.andrekoenig.de/articles/pattern-matching-in-typescript">approaches</a> on type matching, that made me understand better what
+      types <em>are</em> in TypeScript—they are structural types. Again I'm going
+      to quote from same section of that paper to elaborate:
+    </p>
+    <blockquote>
+      <p>Structural types: The TypeScript type system is structural rather than nominal. Whilst structural type systems are common in formal descriptions of object-oriented languages <a href="http://lucacardelli.name/TheoryOfObjects.html">[1]</a>, most industrial mainstream languages, such as Java and C], are nominal. However, structural typing may be the only reasonable fit for JavaScript programming, where objects are often built from scratch (not from classes), and used purely based on their expected shape.</p>
+    </blockquote>
+    <p>
+      That is what I had intuited so it was nice to written down in a paper!
+      It also makes sense of the explanation of <a href="https://www.typescriptlang.org/docs/handbook/2/narrowing.html#discriminated-unions">discriminated unions</a>
+      and why that is a normal and expected way of doing type
+      dispatch/discrimination in TypeScript—your types aren't their at
+      runtime so <em>should</em> you need type information then you need your objects to carry
+      that information with them.
+    </p>
+    <p>
+      And that's the story of my "entypenment"<sup><small><a href="#pun">1</a></small></sup> of TypeScript! To
+      cut a long story short the types ended up looking like this:
+    </p>
+    <pre><code class="hljs language-typescript"><span class="hljs-keyword">export</span> <span class="hljs-keyword">type</span> <span class="hljs-title class_">MalList</span> = {
+    <span class="hljs-attr">type</span>: <span class="hljs-string">'list'</span>,
+    <span class="hljs-attr">values</span>: <span class="hljs-title class_">Array</span>&#x3C;<span class="hljs-title class_">MalType</span>>
+}
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">type</span> <span class="hljs-title class_">MalSymbol</span> = {
+    <span class="hljs-attr">type</span>: <span class="hljs-string">'symbol'</span>
+    <span class="hljs-attr">value</span>: <span class="hljs-built_in">string</span>
+}
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">type</span> <span class="hljs-title class_">MalNumber</span> = {
+    <span class="hljs-attr">type</span>: <span class="hljs-string">'number'</span>
+    <span class="hljs-attr">value</span>: <span class="hljs-built_in">number</span>
+}
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">type</span> <span class="hljs-title class_">MalType</span> = <span class="hljs-title class_">MalList</span> | <span class="hljs-title class_">MalNumber</span> | <span class="hljs-title class_">MalSymbol</span>
+</code></pre>
+    <p>
+      With <code>pr_str</code> making use of the <code>type</code> property (which I'll admit,
+      having a property in your type to represent the type called "type", may
+      be a type too far) that code is now functioning and hopefully
+      idiomatic:
+    </p>
+    <pre><code class="hljs language-typescript"><span class="hljs-keyword">import</span> { <span class="hljs-title class_">MalType</span> } <span class="hljs-keyword">from</span> <span class="hljs-string">'./types.ts'</span>
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">pr_str</span>(<span class="hljs-params">v: MalType</span>): <span class="hljs-built_in">string</span> {
+    <span class="hljs-keyword">switch</span>(v.<span class="hljs-property">type</span>) {
+        <span class="hljs-keyword">case</span> <span class="hljs-string">'list'</span>:
+            <span class="hljs-keyword">return</span> <span class="hljs-string">"("</span> + v.<span class="hljs-property">values</span>.<span class="hljs-title function_">map</span>(pr_str).<span class="hljs-title function_">join</span>(<span class="hljs-string">" "</span>) + <span class="hljs-string">")"</span>
+        <span class="hljs-keyword">case</span> <span class="hljs-string">'number'</span>:
+            <span class="hljs-keyword">return</span> <span class="hljs-title class_">String</span>(v.<span class="hljs-property">value</span>)
+        <span class="hljs-keyword">case</span> <span class="hljs-string">'symbol'</span>:
+            <span class="hljs-keyword">return</span> v.<span class="hljs-property">value</span>
+        <span class="hljs-attr">default</span>:
+            <span class="hljs-keyword">throw</span> <span class="hljs-string">"Unrecognised value type "</span> + v
+    }
+}
+</code></pre>
+    <h2>Something like a bug</h2>
+    <p>
+      Now that I have the tokenizing, reading and printing in place I can run the
+      tests and see that a number of them are passing, however there is this fail:
+    </p>
+    <pre><code>TEST: '(()())' -> ['',(() ())] -> FAIL (line 54):
+    Expected : '.*\n\\(\\(\\)\\ \\(\\)\\)'
+    Got      : '(()())\n(())'
+</code></pre>
+    <p>
+      That can be a little tricky to parse at a glance: the test is
+      expecting the input <code>(()())</code> to look broadly same the in output but my
+      implementation is producing <code>(())</code> which we can verify in the `step1_read_print.ts` REPL
+      like so:
+    </p>
+    <pre><code>$ deno run -A step1_read_print.ts
+user> (()())
+(())
+user> ((1)(2))
+((1))
+</code></pre>
+    <p>
+      My inital educated guess is that the reader stops processing a list on
+      the first <code>)</code> it encounters. Let's test that out:
+    </p>
+    <pre><code>user> (+ 2 (+ 3 4) 5)
+(+ 2 (+ 3 4))
+user> (+ (x 5 6) 7 8 9 (+ 10 11))
+(+ (x 5 6))
+</code></pre>
+    <p>
+      Yep, that looks to be the case. Let's look at the list reading
+      function <sup><small><a href="#read_list">2</a></small></sup>:
+    </p>
+    <pre><code class="hljs language-typescript"><span class="hljs-keyword">function</span> <span class="hljs-title function_">read_list</span>(<span class="hljs-params">r: Reader</span>): <span class="hljs-title class_">MalList</span> {
+    <span class="hljs-keyword">const</span> list : <span class="hljs-title class_">Array</span>&#x3C;<span class="hljs-title class_">MalType</span>> = []
+    <span class="hljs-keyword">while</span>(r.<span class="hljs-title function_">peek</span>() != <span class="hljs-string">")"</span>) {
+        list.<span class="hljs-title function_">push</span>(<span class="hljs-title function_">read_form</span>(r))
+    }
+    <span class="hljs-keyword">return</span> { <span class="hljs-attr">type</span>: <span class="hljs-string">'list'</span>, <span class="hljs-attr">values</span>: list }
+}
+</code></pre>
+    <p>
+      So what should be happening is that while any given token isn't <code>)</code> we
+      attempt to read the next form. Which means given an input like <code>(+ foo bar)</code>
+      we'll see a call stack like this with annotate reader:
+    </p>
+    <ul>
+      <li><code>read_form({pos: 0, tokens: <strong>(</strong> + foo bar )}</code>
+        <ul>
+          <li><code>read_list({pos: 1, tokens: ( <strong>+</strong> foo bar )})</code>
+            <ul>
+              <li><code>read_form({pos: 1, tokens: ( <strong>+</strong> foo bar )})</code>
+                <ul>
+                  <li><code>read_atom({pos: 1, tokens: ( <strong>+</strong> foo bar )})</code></li>
+                </ul>
+              </li>
+              <li><code>read_form({pos: 2, tokens: ( + <strong>foo</strong> bar )})</code>
+                <ul>
+                  <li><code>read_atom({pos: 2, tokens: ( + <strong>foo</strong> bar )})</code></li>
+                </ul>
+              </li>
+              <li><code>read_form({pos: 3, tokens: ( + foo <strong>bar</strong> )})</code>
+                <ul>
+                  <li><code>read_atom({pos: 3, tokens: ( + foo <strong>bar</strong> )})</code></li>
+                </ul>
+              </li>
+            </ul>
+          </li>
+        </ul>
+      </li>
+    </ul>
+    <p>
+      Which leaves the reader in the state <code>read_atom({pos: 4, tokens: ( + foo bar <strong>)</strong> })</code> so when we <code>peek</code> at the next
+      token it's a <code>)</code> and so <code>read_list</code> returns a <code>MalList</code> with the
+      values <code>['+', 'foo', 'bar']</code>. So far so good. But when we introduce a list
+      within a list, e.g <code>(+ (foo) bar)</code>, the call stack will look like this:
+    </p>
+    <ul>
+      <li><code>read_form({pos: 0, tokens: <strong>(</strong> + ( foo ) bar )}</code>
+        <ul>
+          <li><code>read_list({pos: 1, tokens: ( <strong>+</strong> ( foo ) bar )})</code>
+            <ul>
+              <li><code>read_form({pos: 1, tokens: ( <strong>+</strong> ( foo ) bar )})</code>
+                <ul>
+                  <li><code>read_atom({pos: 1, tokens: ( <strong>+</strong> ( foo ) bar )})</code></li>
+                </ul>
+              </li>
+              <li><code>read_form({pos: 2, tokens: ( + <strong>(</strong> foo ) bar )})</code>
+                <ul>
+                  <li><code>read_list({pos: 3, tokens: ( + ( <strong>foo</strong> ) bar )})</code>
+                    <ul>
+                      <li><code>read_form({pos: 3, tokens: ( + ( <strong>foo</strong> ) bar )})</code>
+                        <ul>
+                          <li><code>read_atom({pos: 3, tokens: ( + ( <strong>foo</strong> ) bar )})</code></li>
+                        </ul>
+                      </li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+            </ul>
+          </li>
+        </ul>
+      </li>
+    </ul>
+    <p>
+      Now the reader state is <code>read_atom({pos: 4, tokens: ( + ( foo <strong>)</strong> bar })</code>so we peek and see<code>)</code>which returns from the inner <code>read_list</code> then the outer <code>read_list</code> <em>also</em> sees that<code>)</code> so returns and, because we
+      advance the reader through recursion, that is the—premature—end of the
+      form!
+    </p>
+    <p>
+      While something of a sticky wicket the solution to being stuck on
+      a <code>)</code> presents itself rather simply—move past the token! With this
+      simple change:
+    </p>
+    <pre><code class="hljs language-diff">`@@ -32,2 +32,3 @@ function read_list(r: Reader): MalList {
+     }
+<span class="hljs-addition">+    r.next() // Move past closing paren</span>
+     return { type: 'list', values: list }
+</code></pre>
+    <p>The test now passes!</p>
+    <pre><code>TEST: '(()())' -> ['',(() ())] -> SUCCESS
+</code></pre>
+    <h2>In summary</h2>
+    <p>
+      I learnt a lot about TypeScript and why it is the way it is and I now
+      have <a href="https://github.com/broquaint/mal/commit/6258849ea518a624daa659903d058e74e53223a8">the beginnings</a> of a Mal implementation. This seems like a good
+      point to stop writing, reflect some more, and keep back another
+      day. Next time I will attempt the <a href="https://github.com/kanaka/mal/blob/master/process/guide.md#deferrable">deferrable aspects</a> of Mal and, time
+      permitting, make a start on <a href="https://github.com/kanaka/mal/blob/master/process/guide.md#step-2-eval">step2</a>—the third and most <em>eval</em> step.
+    </p>
+
+    <hr>
+    <h3>Footnotes</h3>
+    <p>
+      <sup><small><a name="pun">1</a></small></sup> I will not defend this pun not because it's good but
+      because it is bad and so would be using the word "enlightenment" there
+    </p>
+    <p>
+      <sup><small><a name="read_list">2</a></small></sup> the real implementation has a call to <code>r.next()</code> at the
+      top of <code>read_list</code> to move past <code>(</code> but I've moved that into
+      <code>read_form</code> for, what I hope, is a simpler explanation.
+    </p>
