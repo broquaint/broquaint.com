@@ -1,3 +1,20 @@
-# robotstxt.org/
+# OpenAI’s web crawler: GPT3.5, GPT4, ChatGPT
+User-agent: GPTBot
+Disallow: /
 
-User-agent: *
+# ChatGPT plugins
+User-agent: ChatGPT-User
+Disallow: /
+
+# Google's web crawler: Bard, VertexAI, Gemini
+User-agent: Google-Extended
+Disallow: /
+
+# Claude
+User-agent: anthropic-ai
+Disallow: /
+
+# Common Crawl
+User-agent: CCBot
+Disallow: /
+
