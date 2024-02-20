@@ -4,12 +4,12 @@ title: Home
 ---
 
 <section>
-<h2>Latest Posts</h2>
+<h2>Latest posts</h2>
 
 <ul>
   {% for post in site.posts %}
     <li>
-      <a href="{{ post.url }}">{{ post.title }}</a> — {{ post.date | date_to_string }}
+      <a href="{{ post.url }}">{{ post.title }}</a> — {{ post.date | date: "%Y-%m-%d" }}
     </li>
     {% endfor %}
 </ul>
@@ -23,6 +23,7 @@ title: Home
 
       <section id=projects>
         <h2>Side projects</h2>
-        <ul></ul>
-        <p>More @ <a href='https://github.com/broquaint?tab=repositories'>Github</a></p>
+        <ul><em>Loading respos from <a href='https://github.com/broquaint?tab=repositories'>GitHub</a> &hellip;</em></ul>
+        <hr>
+        <p>With more on <a href='https://github.com/broquaint?tab=repositories'>GitHub</a>.</p>
       </section>

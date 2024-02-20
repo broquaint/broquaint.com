@@ -6,11 +6,11 @@
             [clojure.string     :as string]))
 
 ;; 1000ms = 1s
-;; 1000 * 60 * 60 * 24 = 86400000
-(def one-day 86400000)
+;; 1000ms * 60s * 10m = 600000ms
+(def ten-minutes 600000)
 
 (defn ttl-cache [seed]
-  (cache/ttl-cache-factory seed :ttl one-day))
+  (cache/ttl-cache-factory seed :ttl ten-minutes))
 
 ;; For some reason I wasn't consistently getting a body back with 304
 ;; responses, possibly due to github but more likely something in the
@@ -37,7 +37,9 @@
    :pushed_at (string/replace (:pushed_at repo) #"T.*" "")
    })
 
+(defn get-renderable-repos []
+  (let [recent-repos (take 4 (reverse (sort-by :pushed_at (get-repos))))]
+    (map normalize-fields recent-repos)))
+
 (defn handler [_] ;; request
-  (let [recent-repos (take 4 (reverse (sort-by :pushed_at (get-repos))))
-        for-json (map normalize-fields recent-repos)]
-    (response {:repos for-json})))
+  (response {:repos (get-renderable-repos)}))
