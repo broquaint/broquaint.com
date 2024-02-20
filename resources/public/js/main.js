@@ -46,7 +46,7 @@ function stopRotateSection() {
 jQuery(function() {
   // If the repos weren't already fetched, serve the page then fetch the repos.
   if(jQuery('#projects ul li').length === 0)
-      setTimeout(() => jQuery.getJSON('/repos.json', {}, handleReposJSON), 60*1000);
+      jQuery.getJSON('/repos.json', {}, handleReposJSON);
 
   jQuery('#projects hr').hover(startRotateSection, stopRotateSection)
 });

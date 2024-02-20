@@ -5,6 +5,10 @@
                  [ring/ring-core "1.11.0"]
                  [ring/ring-jetty-adapter "1.11.0"]
                  [compojure "1.7.1"]
+
+                 ;; Give SLF4J a logging provide to work with.
+                 [org.slf4j/slf4j-simple "2.0.5"]
+
                  ;; broquaint.github-repos deps vv
                  [ring/ring-json "0.5.1"]
                  [irresponsible/tentacles "0.6.9" :exclusions [cheshire]]
