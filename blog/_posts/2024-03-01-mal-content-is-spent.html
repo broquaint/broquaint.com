@@ -1,0 +1,127 @@
+---
+layout: post
+title: "Mal content is spent"
+date: 2024-03-01 14:56:13 +0700
+author: Dan Brook
+categories: blog learning
+---
+
+<link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/atom-one-light.min.css" rel="stylesheet">
+
+    <p>
+      So far on this learning journey through TypeScript I've started a
+      Dungeon Crawl Stone Soup game wins follower (<a href="/blog/learning/2024/01/04/learning-and-making.html">part 1</a>, <a href="/blog/learning/2024/01/19/just-some-data.html">part 2</a>)
+      and implemented the first 4 steps of <a href="%5Bhttps://github.com/kanaka/mal">Mal</a>
+      (<a href="/blog/learning/2024/01/24/mal-for-me.htm">Step 0: the REPL &#x26; Step 1: Read and Print</a>, <a href="/blog/learning/2024/01/29/easy-as-falling-down-stairs.html">Step 2: Eval</a>,
+      <a href="/blog/learning/2024/02/09/mapping-out-the-environment.html:">Step 3: Environments</a>). Logically next is more Mal and in this case
+      I'm tackling two steps: <a href="https://github.com/kanaka/mal/blob/master/process/guide.md#step-4-if-fn-do">Step 4: If Fn Do</a> and <a href="https://github.com/kanaka/mal/blob/master/process/guide.md#step-5-tail-call-optimization">Step 5: Tail call optimization</a>.
+    </p>
+    <h2>Two steps forward</h2>
+    <p>
+      The reason I'm covering two steps in this post as that there's not
+      much to report in terms of what was learnt. This is quite typical for
+      learning a language when implementing Mal—a lot of the learning
+      happens on the first few steps, as you familiarize yourself with its
+      concepts and facilities, then when you're comfortable with
+      the language you can focus on applying that learning to the remaining
+      steps.
+    </p>
+    <h2>Almost control flow analysis</h2>
+    <p>
+      So in Step 4 one thing that needs implementing is an equality check
+      (i.e <code>(= foo bar)</code> test if <code>foo</code> and <code>bar</code> are equivalent<a href="#equal-rights"><sup>1</sup></a>),
+      which is always an interesting part of the implementation as you are
+      dealing with both a heterogeneous set of Mal types and also reconciling
+      its comparison requirements with how the host language works.
+    </p>
+    <p>
+      A straightforward way of doing this in a lot of languages is to
+      match/switch on the Mal type and then compare when the two values
+      being compared share a type (otherwise they are necessarily not
+      equivalent (with an exception for lists &amp; vectors)). I had hoped it would be as simple a something like this:
+    </p>
+    <pre><code class="hljs language-typescript"><span class="hljs-keyword">if</span>(a.<span class="hljs-property">type</span> === b.<span class="hljs-property">type</span>) {
+    <span class="hljs-keyword">switch</span>(a.<span class="hljs-property">type</span>) {
+        <span class="hljs-keyword">case</span> <span class="hljs-string">'number'</span>:
+            <span class="hljs-keyword">return</span> a.<span class="hljs-property">value</span> === <span style="text-decoration: red wavy underline;">b.<span class="hljs-property">value</span></span>
+        <span class="hljs-comment">// …</span>
+    }
+}
+</code></pre>
+    <p>
+      Which logically speaking should hold—we've asserted that <code>a</code> and <code>b</code>
+      have the same <code>type</code> property so are the same type<a href="#be-better"><sup>2</sup></a> and therefore both <em>will</em> have a
+      <code>value</code> property. However—as the red squiggly
+      indicates, TypeScript doesn't know what to make of <code>b.value</code>:
+    </p>
+    <blockquote>
+      <p style="white-space: pre;">Property 'value' does not exist on type 'MalType'.
+  Property 'value' does not exist on type 'MalList'.</p>
+    </blockquote>
+    <p>
+      So the type checker has enough context in the <code>case</code> branch to know
+      that <code>a.value</code> is fine but the control flow analysis from the earlier
+      <code>if</code> statement doesn't propagate and hold that <code>b.value</code> must also
+      necessarily be fine. The fix was, of course, to just do the comparison
+      in the <code>case</code> branch (but it's a <a href="https://github.com/broquaint/mal/blob/my-typescript/impls/ts/core.ts#L76-L104">bit clunky</a> with multiple types).
+    </p>
+    <p>
+      I presume it just isn't supported, rather than being impossible,
+      because it's either too uncommon a use case or just complicates the
+      control flow analysis enough not to warrant the effort. At any rate it
+      was a learning experience!
+    </p>
+    <h2>It does the job</h2>
+    <p>
+      The only other thing of note was finding a use for a <a href="https://www.typescriptlang.org/docs/handbook/2/narrowing.html#using-type-predicates">type predicate</a>
+      to simplify working with <a href="https://clojure.org/reference/sequences">sequence–like</a> types:
+    </p>
+    <pre><code class="hljs language-typescript"><span class="hljs-keyword">function</span> <span class="hljs-title function_">isMalSeq</span>(<span class="hljs-params">v: MalType</span>): v is <span class="hljs-title class_">MalSeq</span> {
+    <span class="hljs-keyword">return</span> v.<span class="hljs-property">type</span> === <span class="hljs-string">'list'</span> || v.<span class="hljs-property">type</span> === <span class="hljs-string">'vector'</span>
+}
+</code></pre>
+    <p>
+      That predicate can then make code like this:
+    </p>
+    <pre><code class="hljs language-typescript"><span class="hljs-string">'empty?'</span>: mal.<span class="hljs-keyword">function</span>(<span class="hljs-params">(v: MalType) => {
+      <span class="hljs-keyword">return</span> mal.bool(v.type === <span class="hljs-string">'list'</span> || v.type === <span class="hljs-string">'vector'</span> ? v.values.length === <span class="hljs-number">0</span> : <span class="hljs-literal">false</span>)
+      }</span>),</code></pre>
+    Into code like this:
+    <pre><code class="hljs language-typescript"><span class="hljs-string">'empty?'</span>: mal.<span class="hljs-keyword">function</span>(<span class="hljs-params">(v: MalType) => {
+    <span class="hljs-keyword">return</span> mal.bool(isMalSeq(v) ? v.values.length === <span class="hljs-number">0</span> : <span class="hljs-literal">false</span>)
+}</span>),
+</code></pre>
+    <p>
+      Which is simpler and the intent clearer.
+    </p>
+    <p>
+      While this is handy it feels awkward as a means of expressing
+      a type predicate but I can appreciate that, once again, TypeScript is
+      aiming to produce as much unadulterated JavaScript as possible and
+      this feature (extending function syntax a little) allows for just
+      that. Pragmatic solutions aren't always beautiful solutions but you can't
+      argue with the results (I mean you <em>can</em>, but maybe don't do that).
+    </p>
+    <h2>Returns diminished</h2>
+    <p>
+      I didn't cover much of the actual Mal implementation as there wasn't much to cover (as it stands it is now Turing complete <em>and</em> has <a href="https://github.com/broquaint/mal/commit/7da28c6ca44765f1f29d585398b94b4c378c41cb">tail–call optimization!</a>). Which brings me on to the conclusion of this series &hellip;
+    </p>
+    <p>
+      Looking ahead to upcoming Mal process steps <a href="https://github.com/kanaka/mal/blob/master/process/guide.md#step-6-files-mutation-and-evil">6</a> through <a href="https://github.com/kanaka/mal/blob/master/process/guide.md#step-a-metadata-self-hosting-and-interop">A</a> I can see that
+      the implementation will continue to be an enjoyable exercise but I
+      doubt it will require learning a great deal more about TypeScript. So,
+      for this blog at least, I'll be ending my fun with Mal in TypeScript
+      and switch back to <a href="https://github.com/broquaint/learn-ts-with-dcss">other thing</a> wherein I'm more likely
+      to work with more libraries, type definitions and other facets of
+      TypeScript.
+    </p>
+    <h3>Footnotes</h3>
+    <p>
+      <a name="equal-rights"><sup>1</sup></a> Further reading: <a href="https://dl.acm.org/doi/10.1145/165593.165596">Equal rights for functional objects or, the more things change, the more they are the same</a> by Henry Baker and Clojure's <a href="https://clojure.org/guides/equality">equality guide</a> for what that looks like in practice.
+    </p>
+    <p>
+      <a name="be-better"><sup>2</sup></a> Don't be like me and use the word "type" in
+      anything that relates to types, it's a bad idea—you will reach <a href="https://en.wikipedia.org/wiki/Semantic_satiation">semantic satiation</a> within moments of beginning any discussion on the matter. I think I can get
+      away with it here because this isn't code that others will ever have
+      to work with.
+    </p>

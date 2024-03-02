@@ -17,6 +17,8 @@ then
         exit 1
     fi
     sleep 120
+else
+    echo '>>> No "full" argument, skipping uberjar build ...'
 fi
 
 cd blog
